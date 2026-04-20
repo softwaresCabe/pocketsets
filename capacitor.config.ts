@@ -7,6 +7,13 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: "automatic",
   },
+  plugins: {
+    LocalNotifications: {
+      smallIcon: "ic_stat_icon_config_sample",
+      iconColor: "#A855F7",
+      sound: "default",
+    },
+  },
 };
 
 export default config;

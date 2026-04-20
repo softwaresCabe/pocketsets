@@ -4,13 +4,13 @@ import { useSets } from "@/lib/api";
 import { SetCard } from "@/components/SetCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { findConflicts, suggestWinner } from "@/lib/conflicts";
-import { useToggleFavorite } from "@/lib/mutations";
+import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { Button } from "@/components/ui/button";
 import { formatDayTimePT, humanMinutes } from "@/lib/time";
 
 export default function MySetsPage() {
   const { data: sets, isLoading } = useSets();
-  const toggle = useToggleFavorite();
+  const { trigger: removeFav, dialog: removeDialog } = useFavoriteToggle();
 
   if (isLoading || !sets) {
     return (
@@ -61,6 +61,7 @@ export default function MySetsPage() {
 
   return (
     <Shell>
+      {removeDialog}
       <div className="grid gap-3 sm:grid-cols-3">
         <Stat label="Sets locked in" value={favorites.length} testId="stat-sets" />
         <Stat label="Stages" value={stagesHit} testId="stat-stages" />
@@ -108,7 +109,7 @@ export default function MySetsPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => toggle.mutate({ setId: loser.id, isFavorite: true })}
+                      onClick={() => removeFav(loser.id, true)}
                       data-testid={`button-accept-suggestion-${idx}`}
                     >
                       Drop {loser.artist.name}

@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useSettings } from "./api";
+import { useSettings, useSets } from "./api";
+import { useScheduleNotifications } from "./useNotifications";
 
 /**
  * Global "now" clock. Ticks once per second. If a demo simulated time is set
@@ -15,6 +16,7 @@ const Ctx = React.createContext<NowContext>({ nowMs: Date.now(), isSimulated: fa
 
 export function NowProvider({ children }: { children: React.ReactNode }) {
   const { data: settings } = useSettings();
+  const { data: sets } = useSets();
   const simulatedIso = settings?.simulatedTime ?? "";
   const [realNow, setRealNow] = React.useState(() => Date.now());
   const [tick, setTick] = React.useState(0);
@@ -30,11 +32,15 @@ export function NowProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo(() => {
     if (simulatedIso) {
       const base = new Date(simulatedIso).getTime();
-      // Once simulated, also advance by tick so countdowns feel alive
       return { nowMs: base + tick * 1000, isSimulated: true };
     }
     return { nowMs: realNow, isSimulated: false };
   }, [simulatedIso, realNow, tick]);
+
+  const leadTime = Number(settings?.defaultLeadTimeMinutes ?? "15");
+  const notificationsEnabled = (settings?.nowPlayingNotifications ?? "true") === "true";
+  // Use real time for scheduling — simulated time should not fire real notifications
+  useScheduleNotifications(sets, realNow, leadTime, notificationsEnabled);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -20,8 +20,8 @@ const FAVORITES_KEY = "ps_favorites";
 const SETTINGS_KEY = "ps_settings";
 
 const DEFAULT_SETTINGS: Record<string, string> = {
-  leadTimeMinutes: "15",
-  notifyNowPlaying: "true",
+  defaultLeadTimeMinutes: "15",
+  nowPlayingNotifications: "true",
   simulatedTime: "",
 };
 

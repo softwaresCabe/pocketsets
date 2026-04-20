@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link } from "wouter";
 import { Heart, Search } from "lucide-react";
 import { useArtists, useSets } from "@/lib/api";
-import { useToggleFavorite } from "@/lib/mutations";
+import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ export default function LineupPage() {
   const { data: artists, isLoading } = useArtists();
   const { data: sets } = useSets();
   const [query, setQuery] = React.useState("");
+  const { trigger: toggleFavorite, dialog } = useFavoriteToggle();
 
   if (isLoading || !artists || !sets) {
     return (
@@ -41,10 +42,10 @@ export default function LineupPage() {
   const letters = Array.from(byLetter.keys()).sort();
 
   const setByArtist = new Map(sets.map((s) => [s.artistId, s]));
-  const toggleFavorite = useToggleFavorite();
 
   return (
     <Shell>
+      {dialog}
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {artists.length} artists. Tap a name for details, or heart to add to My Sets.
@@ -113,7 +114,7 @@ export default function LineupPage() {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  toggleFavorite.mutate({ setId: set.id, isFavorite: set.isFavorite });
+                                  toggleFavorite(set.id, set.isFavorite);
                                 }}
                                 className="flex-shrink-0 rounded-full p-1.5 transition-colors hover:bg-secondary"
                               >

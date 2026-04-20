@@ -1,6 +1,6 @@
 import { Link } from "wouter";
-import { ArrowRight, Calendar, PartyPopper, Sparkles } from "lucide-react";
-import { useFestival, useSets, useStages, useAnnouncements } from "@/lib/api";
+import { ArrowRight, Calendar, PartyPopper, Sparkles, Star } from "lucide-react";
+import { useFestival, useSets, useStages, useAnnouncements, useSettings } from "@/lib/api";
 import { useNow } from "@/lib/now";
 import {
   toMs,
@@ -19,15 +19,27 @@ export default function NowPage() {
   const { data: sets, isLoading } = useSets();
   const { data: stages } = useStages();
   const { data: announcements } = useAnnouncements();
-  const { nowMs, isSimulated } = useNow();
+  const { data: settings } = useSettings();
+  const { nowMs } = useNow();
 
   if (isLoading || !sets || !festival || !stages) {
     return <PageShell title="Now"><NowSkeleton /></PageShell>;
   }
 
   const festivalStartMs = toMs(`${festival.startDate}T19:00:00-07:00`);
-  const festivalEndMs = toMs(`${festival.endDate}T28:00:00-07:00`); // 4am Monday
+  const festivalEndMs = toMs(`${festival.endDate}T28:00:00-07:00`);
   const isLive = nowMs >= festivalStartMs && nowMs < festivalEndMs;
+
+  // Now-playing banner: favorites that started within the last 5 minutes
+  const nowPlayingEnabled = (settings?.nowPlayingNotifications ?? "true") === "true";
+  const recentlyStarted = nowPlayingEnabled
+    ? sets.filter((s) => {
+        if (!s.isFavorite || !s.startTime || !s.endTime) return false;
+        const start = toMs(s.startTime);
+        const end = toMs(s.endTime);
+        return nowMs >= start && nowMs < end && nowMs - start < 5 * 60_000;
+      })
+    : [];
 
   return (
     <PageShell
@@ -35,6 +47,27 @@ export default function NowPage() {
       eyebrow={festival.name}
       eyebrowColor="text-primary"
     >
+      {recentlyStarted.map((s) => (
+        <Link
+          key={s.id}
+          href={`/sets/${s.id}`}
+          className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 hover-elevate"
+          data-testid={`banner-now-playing-${s.id}`}
+        >
+          <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-emerald-300">
+              {s.artist.name} just started
+            </div>
+            <div className="text-xs text-emerald-400/80">{s.stage.name}</div>
+          </div>
+          <ArrowRight className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+        </Link>
+      ))}
+
       {isLive ? (
         <LiveView sets={sets} stages={stages} nowMs={nowMs} />
       ) : (
@@ -70,6 +103,15 @@ export default function NowPage() {
   );
 }
 
+function getCurrentFestivalDay(nowMs: number): "fri" | "sat" | "sun" | null {
+  const { date, hour } = partsInPT(new Date(nowMs).toISOString());
+  const effectiveDate = hour < 6 ? date - 1 : date;
+  if (effectiveDate === 15) return "fri";
+  if (effectiveDate === 16) return "sat";
+  if (effectiveDate === 17) return "sun";
+  return null;
+}
+
 function LiveView({
   sets,
   stages,
@@ -79,89 +121,141 @@ function LiveView({
   stages: any[];
   nowMs: number;
 }) {
+  const currentDay = getCurrentFestivalDay(nowMs);
+
   const liveSets = sets.filter(
-    (s) => toMs(s.startTime) <= nowMs && toMs(s.endTime) > nowMs,
+    (s) => s.startTime && s.endTime && toMs(s.startTime) <= nowMs && toMs(s.endTime) > nowMs,
   );
-  const upNext = sets
-    .filter((s) => s.isFavorite && toMs(s.startTime) > nowMs)
+  const liveFavs = liveSets.filter((s) => s.isFavorite);
+  const upcomingFavs = sets
+    .filter((s) => s.isFavorite && s.startTime && toMs(s.startTime) > nowMs)
+    .sort((a, b) => toMs(a.startTime!) - toMs(b.startTime!))
     .slice(0, 3);
-  const liveFavorites = liveSets.filter((s) => s.isFavorite);
+
+  const sortedStages = [...stages].sort((a, b) => a.displayOrder - b.displayOrder);
 
   return (
     <>
-      {liveFavorites.length > 0 && (
-        <section className="mb-10">
+      {liveFavs.length > 0 && (
+        <section className="mb-8">
           <SectionHeader title="Now playing · your favorites" icon={Sparkles} />
           <div className="mt-3 space-y-3">
-            {liveFavorites.map((s) => (
+            {liveFavs.map((s) => (
               <SetCard key={s.id} set={s} variant="row" highlighted />
             ))}
           </div>
         </section>
       )}
 
-      <section className="mb-10">
-        <SectionHeader
-          title={upNext.length > 0 ? "Up next in your lineup" : "Up next"}
-          icon={Calendar}
-        />
-        {upNext.length > 0 ? (
+      <section className="mb-8">
+        <SectionHeader title="On stage right now" />
+        <div className="mt-3 space-y-2">
+          {sortedStages.map((stage) => {
+            const daySets = currentDay
+              ? sets.filter((s) => s.stageId === stage.id && s.day === currentDay)
+              : [];
+            const playing = daySets.find(
+              (s) => s.startTime && s.endTime && toMs(s.startTime) <= nowMs && toMs(s.endTime) > nowMs,
+            );
+            const nextUp = daySets
+              .filter((s) => s.startTime && toMs(s.startTime) > nowMs)
+              .sort((a, b) => toMs(a.startTime!) - toMs(b.startTime!))[0];
+            return (
+              <StageNowCard key={stage.id} stage={stage} playing={playing} nextUp={nextUp} nowMs={nowMs} />
+            );
+          })}
+        </div>
+      </section>
+
+      <section>
+        <SectionHeader title="Up next in your lineup" icon={Calendar} />
+        {upcomingFavs.length > 0 ? (
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {upNext.map((s) => (
+            {upcomingFavs.map((s) => (
               <SetCard key={s.id} set={s} />
             ))}
           </div>
         ) : (
           <div className="mt-3 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
             <PartyPopper className="mx-auto h-8 w-8 text-muted-foreground" />
-            <p className="mt-3 text-sm text-foreground">No favorites starting soon.</p>
+            <p className="mt-3 text-sm text-foreground">
+              {liveFavs.length > 0 ? "No more favorites tonight." : "No favorites added yet."}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Open the <Link className="text-primary hover:underline" href="/schedule">schedule</Link> and tap a star to add sets.
+              Open the{" "}
+              <Link className="text-primary hover:underline" href="/schedule">
+                schedule
+              </Link>{" "}
+              and tap a star to add sets.
             </p>
           </div>
         )}
       </section>
-
-      <section>
-        <SectionHeader title="Right now, across every stage" />
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-          {stages.map((stage) => {
-            const playing = liveSets.find((s) => s.stageId === stage.id);
-            return (
-              <Link className="group flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3 hover-elevate" key={stage.id} href={playing ? `/sets/${playing.id}` : `/stages/${stage.id}`} data-testid={`stage-tile-${stage.id}`}>
-                  <div
-                    className="h-12 w-12 flex-shrink-0 rounded-lg flex items-center justify-center font-mono text-xs font-bold"
-                    style={{
-                      backgroundColor: `${stage.color}20`,
-                      color: stage.color,
-                    }}
-                  >
-                    {stage.shortCode}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-foreground truncate">
-                      {stage.name}
-                    </div>
-                    {playing ? (
-                      <div className="mt-0.5 text-xs text-muted-foreground truncate">
-                        <span className="text-foreground font-medium">{playing.artist.name}</span>
-                        <span className="mx-1.5">·</span>
-                        <span className="tabular">
-                          {relativeLabel(playing.startTime, playing.endTime, nowMs).label}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="mt-0.5 text-xs text-muted-foreground/70">
-                        Dark right now
-                      </div>
-                    )}
-                  </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
     </>
+  );
+}
+
+function StageNowCard({
+  stage,
+  playing,
+  nextUp,
+  nowMs,
+}: {
+  stage: any;
+  playing: SetWithDetails | undefined;
+  nextUp: SetWithDetails | undefined;
+  nowMs: number;
+}) {
+  const href = playing ? `/sets/${playing.id}` : `/stages/${stage.id}`;
+  const minsLeft = playing
+    ? Math.ceil((toMs(playing.endTime!) - nowMs) / 60000)
+    : null;
+
+  return (
+    <Link
+      href={href}
+      data-testid={`stage-now-${stage.id}`}
+      className="flex overflow-hidden rounded-xl border border-border bg-card hover-elevate"
+    >
+      <div className="w-1 flex-shrink-0" style={{ backgroundColor: stage.color }} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: stage.color }}
+          >
+            {stage.shortCode}
+          </span>
+          <span className="text-xs text-muted-foreground">{stage.name}</span>
+        </div>
+
+        {playing ? (
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2 flex-shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <span className="truncate text-sm font-semibold">{playing.artist.name}</span>
+            {playing.isFavorite && (
+              <Star className="h-3.5 w-3.5 flex-shrink-0 fill-primary text-primary" aria-label="Favorited" />
+            )}
+            <span className="ml-auto flex-shrink-0 tabular text-xs text-emerald-400">
+              {minsLeft}m left
+            </span>
+          </div>
+        ) : (
+          <span className="text-xs italic text-muted-foreground/60">Dark right now</span>
+        )}
+
+        {nextUp && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>Next:</span>
+            <span className="truncate font-medium text-foreground/80">{nextUp.artist.name}</span>
+            <span className="ml-auto flex-shrink-0 tabular">{formatTimePT(nextUp.startTime)}</span>
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
 
@@ -239,7 +333,7 @@ function CountdownView({
 function DayPreview({ day, sets }: { day: "fri" | "sat" | "sun"; sets: SetWithDetails[] }) {
   const daySets = sets.filter((s) => s.day === day);
   const headline = daySets.find(
-    (s) => s.stage.id === "kinetic-field" && partsInPT(s.startTime).hour >= 22,
+    (s) => s.stage.id === "kinetic-field" && s.startTime && partsInPT(s.startTime).hour >= 22,
   );
   const DAY_MAP = {
     fri: { label: "Friday", date: "May 15", tag: "Kickoff" },

@@ -4,7 +4,7 @@ import { Star } from "lucide-react";
 import { useSets, useStages } from "@/lib/api";
 import { useNow } from "@/lib/now";
 import { toMs, formatTimePT, partsInPT, durationMinutes } from "@/lib/time";
-import { useToggleFavorite } from "@/lib/mutations";
+import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -199,7 +199,7 @@ function StageColumn({
   totalHeight: number;
   day?: Day;
 }) {
-  const toggle = useToggleFavorite();
+  const { trigger, dialog } = useFavoriteToggle();
   const hourPattern = Array.from({ length: DAY_LENGTH_MINUTES / 60 + 1 }, (_, i) => i);
 
   return (
@@ -207,6 +207,7 @@ function StageColumn({
       className="relative flex-shrink-0 border-r border-border"
       style={{ width: COL_WIDTH, height: totalHeight }}
     >
+      {dialog}
       {/* Sticky stage header */}
       <div
         className="sticky top-0 z-10 h-12 border-b border-border bg-card/95 px-3 py-2 backdrop-blur"
@@ -256,7 +257,7 @@ function StageColumn({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      toggle.mutate({ setId: set.id, isFavorite: set.isFavorite });
+                      trigger(set.id, set.isFavorite);
                     }}
                     className="p-0.5 text-muted-foreground hover:text-primary"
                     aria-label={set.isFavorite ? "Remove favorite" : "Add favorite"}
@@ -305,8 +306,10 @@ function MobileSchedule({ sets }: { sets: SetWithDetails[] }) {
 }
 
 function MobileSetRow({ set }: { set: SetWithDetails }) {
-  const toggle = useToggleFavorite();
+  const { trigger, dialog } = useFavoriteToggle();
   return (
+    <>
+    {dialog}
     <Link className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 hover-elevate" href={`/sets/${set.id}`} data-testid={`mobile-row-${set.id}`}>
         <div
           className="h-10 w-1 flex-shrink-0 rounded-full"
@@ -327,7 +330,7 @@ function MobileSetRow({ set }: { set: SetWithDetails }) {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            toggle.mutate({ setId: set.id, isFavorite: set.isFavorite });
+            trigger(set.id, set.isFavorite);
           }}
           className={cn(
             "flex h-10 w-10 items-center justify-center rounded-full border transition-colors",
@@ -341,6 +344,7 @@ function MobileSetRow({ set }: { set: SetWithDetails }) {
           <Star className={cn("h-4 w-4", set.isFavorite && "fill-current")} />
         </button>
     </Link>
+    </>
   );
 }
 

@@ -314,16 +314,49 @@ const SUN_SLOTS: SetSlot[] = [
   ["bionic-jungle","alves"],["bionic-jungle","beltran-b2b-simas"],["bionic-jungle","dj-tennis-b2b-red-axes"],["bionic-jungle","isabella"],["bionic-jungle","kinahau"],
 ];
 
+// Placeholder set times — distributed evenly 7 PM–5 AM per stage.
+// Will be replaced with the official Insomniac schedule when published.
+const SHOW_START_MIN = 19 * 60; // 7:00 PM PT
+const SHOW_END_MIN = 29 * 60;   // 5:00 AM PT next morning
+const DAY_DATE: Record<"fri" | "sat" | "sun", string> = {
+  fri: "2026-05-15",
+  sat: "2026-05-16",
+  sun: "2026-05-17",
+};
+
+function ptMinutesToISO(dateStr: string, minutesSinceMidnightPT: number): string {
+  const d = new Date(`${dateStr}T00:00:00-07:00`);
+  d.setTime(d.getTime() + minutesSinceMidnightPT * 60000);
+  return d.toISOString();
+}
+
 function buildSets(day: "fri" | "sat" | "sun", slots: SetSlot[]): SetRow[] {
-  return slots.map(([stageId, artistId], i) => ({
-    id: `${day}-${stageId}-${i}`,
-    festivalId: FESTIVAL_ID,
-    stageId,
-    artistId,
-    startTime: null,
-    endTime: null,
-    day,
-  }));
+  const dateStr = DAY_DATE[day];
+  const totalMin = SHOW_END_MIN - SHOW_START_MIN;
+
+  const stageCount = new Map<string, number>();
+  const stagePos = new Map<string, number>();
+  for (const [stageId] of slots) {
+    stageCount.set(stageId, (stageCount.get(stageId) ?? 0) + 1);
+  }
+  for (const id of stageCount.keys()) stagePos.set(id, 0);
+
+  return slots.map(([stageId, artistId], i) => {
+    const n = stageCount.get(stageId)!;
+    const pos = stagePos.get(stageId)!;
+    stagePos.set(stageId, pos + 1);
+    const startMin = SHOW_START_MIN + (pos / n) * totalMin;
+    const endMin = SHOW_START_MIN + ((pos + 1) / n) * totalMin;
+    return {
+      id: `${day}-${stageId}-${i}`,
+      festivalId: FESTIVAL_ID,
+      stageId,
+      artistId,
+      startTime: ptMinutesToISO(dateStr, startMin),
+      endTime: ptMinutesToISO(dateStr, endMin),
+      day,
+    };
+  });
 }
 
 export const ALL_SETS: SetRow[] = [

@@ -4,7 +4,7 @@ import type { SetWithDetails } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatTimePT, durationMinutes, humanMinutes, relativeLabel } from "@/lib/time";
-import { useToggleFavorite } from "@/lib/mutations";
+import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { useNow } from "@/lib/now";
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
 const DAY_LABEL = { fri: "Fri", sat: "Sat", sun: "Sun" } as const;
 
 export function SetCard({ set, variant = "card", showDay = false, highlighted = false }: Props) {
-  const toggle = useToggleFavorite();
+  const { trigger, dialog } = useFavoriteToggle();
   const { nowMs } = useNow();
   const duration = durationMinutes(set.startTime, set.endTime);
   const rel = relativeLabel(set.startTime, set.endTime, nowMs);
@@ -25,11 +25,13 @@ export function SetCard({ set, variant = "card", showDay = false, highlighted = 
   const onToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggle.mutate({ setId: set.id, isFavorite: set.isFavorite });
+    trigger(set.id, set.isFavorite);
   };
 
   if (variant === "row") {
     return (
+      <>
+      {dialog}
       <Link className={cn(
             "group flex items-center gap-4 rounded-lg border border-border bg-card px-4 py-3 hover-elevate transition-colors",
             highlighted && "ring-1 ring-primary",
@@ -77,10 +79,13 @@ export function SetCard({ set, variant = "card", showDay = false, highlighted = 
             </div>
           </div>
       </Link>
+      </>
     );
   }
 
   return (
+    <>
+    {dialog}
     <Link className={cn(
           "group relative block overflow-hidden rounded-xl border border-border bg-card hover-elevate transition-colors",
           highlighted && "ring-1 ring-primary",
@@ -130,6 +135,7 @@ export function SetCard({ set, variant = "card", showDay = false, highlighted = 
           </div>
         </div>
     </Link>
+    </>
   );
 }
 

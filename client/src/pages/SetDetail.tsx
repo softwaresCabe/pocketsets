@@ -19,7 +19,8 @@ import {
   relativeLabel,
 } from "@/lib/time";
 import { useNow } from "@/lib/now";
-import { useToggleFavorite, useUpdateFavoriteLeadTime } from "@/lib/mutations";
+import { useUpdateFavoriteLeadTime } from "@/lib/mutations";
+import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { findConflicts } from "@/lib/conflicts";
 import { ArtistAvatar } from "./Lineup";
 
@@ -31,7 +32,7 @@ export default function SetDetailPage() {
   const { data: sets } = useSets();
   const { data: settings } = useSettings();
   const { nowMs } = useNow();
-  const toggle = useToggleFavorite();
+  const { trigger: toggleFav, dialog: favDialog, isPending: toggling } = useFavoriteToggle();
   const updateLead = useUpdateFavoriteLeadTime();
 
   if (isLoading) {
@@ -57,7 +58,7 @@ export default function SetDetailPage() {
       return a1 < b2 && b1 < a2;
     });
 
-  const globalLead = Number(settings?.leadTimeMinutes ?? "15");
+  const globalLead = Number(settings?.defaultLeadTimeMinutes ?? "15");
   const effectiveLead = set.customLeadTimeMinutes ?? globalLead;
 
   return (
@@ -102,10 +103,12 @@ export default function SetDetailPage() {
               </div>
             </div>
             <div className="flex flex-col items-end gap-3">
+              {favDialog}
               <Button
                 size="lg"
                 variant={set.isFavorite ? "default" : "outline"}
-                onClick={() => toggle.mutate({ setId: set.id, isFavorite: set.isFavorite })}
+                onClick={() => toggleFav(set.id, set.isFavorite)}
+                disabled={toggling}
                 className="min-w-[140px]"
                 data-testid="button-favorite-set"
               >
