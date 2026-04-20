@@ -6,6 +6,7 @@ import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { formatDayTimePT } from "@/lib/time";
 
 export default function LineupPage() {
   const { data: artists, isLoading } = useArtists();
@@ -100,10 +101,21 @@ export default function LineupPage() {
                           <ArtistAvatar name={a.name} hue={a.imageHue ?? 272} />
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-semibold">{a.name}</div>
-                            <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                              {a.genres?.split(",")[0] ?? "—"}
-                              {a.country && <span> · {a.country}</span>}
-                            </div>
+                            {(() => {
+                              const set = setByArtist.get(a.id);
+                              if (!set) return (
+                                <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                                  {a.genres?.split(",")[0] ?? "—"}
+                                </div>
+                              );
+                              return (
+                                <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                                  <span style={{ color: set.stage.color }}>{set.stage.shortCode}</span>
+                                  <span> · </span>
+                                  <span className="tabular">{formatDayTimePT(set.startTime)}</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                           {(() => {
                             const set = setByArtist.get(a.id);

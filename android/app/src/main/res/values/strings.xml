@@ -4,4 +4,5 @@
     <string name="title_activity_main">PocketSets</string>
     <string name="package_name">com.pocketsets.app</string>
     <string name="custom_url_scheme">com.pocketsets.app</string>
+    <string name="widget_description">Your next set, live stages, and a recommendation.</string>
 </resources>

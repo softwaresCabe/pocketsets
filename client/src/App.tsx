@@ -18,6 +18,12 @@ import Settings from "@/pages/Settings";
 import Announcements from "@/pages/Announcements";
 import { AppShell } from "@/components/AppShell";
 import { NowProvider } from "@/lib/now";
+import { useWidgetData } from "@/lib/useWidgetData";
+
+function WidgetDataSync() {
+  useWidgetData();
+  return null;
+}
 
 function AppRouter() {
   return (
@@ -45,6 +51,7 @@ function App() {
         <Toaster />
         <Router hook={useHashLocation}>
           <NowProvider>
+            <WidgetDataSync />
             <AppShell>
               <AppRouter />
             </AppShell>

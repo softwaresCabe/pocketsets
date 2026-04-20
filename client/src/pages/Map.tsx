@@ -29,21 +29,53 @@ export default function MapPage() {
     clampTranslate(tx, ty, next);
   };
 
-  const onTouchStart = React.useRef<{ dist: number; scale: number } | null>(null);
+  const touchState = React.useRef<{
+    // single-finger pan
+    x: number; y: number;
+    // pinch-to-zoom
+    dist: number; scale: number;
+  } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchState.current = {
+        x: e.touches[0].clientX - tx,
+        y: e.touches[0].clientY - ty,
+        dist: 0,
+        scale,
+      };
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchState.current = { x: tx, y: ty, dist: Math.hypot(dx, dy), scale };
+    }
+  };
+
   const onTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
+    e.preventDefault();
+    if (!touchState.current) return;
+    if (e.touches.length === 1) {
+      setTx(e.touches[0].clientX - touchState.current.x);
+      setTy(e.touches[0].clientY - touchState.current.y);
+    } else if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.hypot(dx, dy);
-      if (!onTouchStart.current) {
-        onTouchStart.current = { dist, scale };
-        return;
-      }
-      const next = Math.min(4, Math.max(0.5, onTouchStart.current.scale * (dist / onTouchStart.current.dist)));
+      const next = Math.min(4, Math.max(0.5, touchState.current.scale * (dist / touchState.current.dist)));
       setScale(next);
     }
   };
-  const onTouchEnd = () => { onTouchStart.current = null; };
+
+  const onTouchEnd = () => { touchState.current = null; };
+
+  // Attach touchmove as non-passive so preventDefault() stops page scroll while panning
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: TouchEvent) => e.preventDefault();
+    el.addEventListener("touchmove", handler, { passive: false });
+    return () => el.removeEventListener("touchmove", handler);
+  }, []);
 
   const reset = () => { setScale(1); setTx(0); setTy(0); };
 
@@ -73,11 +105,12 @@ export default function MapPage() {
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
         onWheel={onWheel}
+        onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         <img
-          src="/edc-map.png"
+          src="./edc-map.png"
           alt="EDC Las Vegas 2026 festival map"
           draggable={false}
           className="absolute inset-0 h-full w-full object-contain select-none"

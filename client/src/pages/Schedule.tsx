@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Star } from "lucide-react";
 import { useSets, useStages } from "@/lib/api";
 import { useNow } from "@/lib/now";
-import { toMs, formatTimePT, partsInPT, durationMinutes } from "@/lib/time";
+import { toMs, formatTimePT, partsInPT, durationMinutes, getCurrentFestivalDay } from "@/lib/time";
 import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,9 +35,13 @@ export default function SchedulePage() {
   const { nowMs } = useNow();
 
   const [day, setDay] = React.useState<Day>(() => {
-    const hash = typeof window !== "undefined" ? window.location.hash.replace(/^#\/?schedule#/, "") : "";
-    if (hash === "fri" || hash === "sat" || hash === "sun") return hash;
-    return "fri";
+    if (typeof window === "undefined") return "fri";
+    const stored = sessionStorage.getItem("scheduleDay");
+    if (stored === "fri" || stored === "sat" || stored === "sun") {
+      sessionStorage.removeItem("scheduleDay");
+      return stored;
+    }
+    return getCurrentFestivalDay(Date.now()) ?? "fri";
   });
 
   const gridRef = React.useRef<HTMLDivElement | null>(null);

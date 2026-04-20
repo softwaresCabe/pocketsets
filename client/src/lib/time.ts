@@ -121,6 +121,20 @@ export function festivalDay(iso: string, festivalStart: string): "fri" | "sat" |
   return "post";
 }
 
+/**
+ * Returns the current festival day ("fri" | "sat" | "sun") based on nowMs,
+ * accounting for the 6am PT cutoff. Returns null outside the festival window.
+ */
+export function getCurrentFestivalDay(nowMs: number): "fri" | "sat" | "sun" | null {
+  const nowIso = new Date(nowMs).toISOString();
+  const { date, hour } = partsInPT(nowIso);
+  const effective = hour < 6 ? date - 1 : date;
+  if (effective === 15) return "fri";
+  if (effective === 16) return "sat";
+  if (effective === 17) return "sun";
+  return null;
+}
+
 /** Days until a given ISO (0 = today, 1 = tomorrow, ...). Operates in PT. */
 export function daysUntilPT(iso: string, nowMs: number): number {
   const a = partsInPT(iso).date;

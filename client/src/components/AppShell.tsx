@@ -4,11 +4,13 @@ import {
   Calendar,
   Home,
   MapPin,
+  Menu,
   Radio,
   Settings,
   Star,
   Users,
   Bell,
+  X,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -25,11 +27,11 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { to: "/", label: "Now", icon: Home, testId: "link-now" },
-  { to: "/schedule", label: "Schedule", icon: Calendar, testId: "link-schedule" },
-  { to: "/lineup", label: "Lineup", icon: Users, testId: "link-lineup" },
   { to: "/my-sets", label: "My Sets", icon: Star, testId: "link-my-sets" },
-  { to: "/stages", label: "Stages", icon: Radio, testId: "link-stages" },
+  { to: "/schedule", label: "Schedule", icon: Calendar, testId: "link-schedule" },
   { to: "/map", label: "Map", icon: MapPin, testId: "link-map" },
+  { to: "/lineup", label: "Lineup", icon: Users, testId: "link-lineup" },
+  { to: "/stages", label: "Stages", icon: Radio, testId: "link-stages" },
   { to: "/announcements", label: "Alerts", icon: Bell, testId: "link-announcements" },
   { to: "/settings", label: "Settings", icon: Settings, testId: "link-settings" },
 ];
@@ -40,6 +42,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: favorites } = useFavorites();
   const { data: announcements } = useAnnouncements();
   const { nowMs, isSimulated } = useNow();
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
+  // Close menu on navigation
+  React.useEffect(() => { setMenuOpen(false); }, [location]);
 
   const favCount = favorites?.length ?? 0;
   const alertCount = announcements?.length ?? 0;
@@ -115,9 +121,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content area */}
-      <main className="md:pl-64 pb-20 md:pb-0 min-h-screen">
-        {/* Mobile top bar */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur md:hidden">
+      <main className="md:pl-64 md:pb-0 min-h-screen" style={{ paddingBottom: "calc(80px + env(safe-area-inset-bottom))" }}>
+        {/* Mobile top bar — padded for Dynamic Island / notch */}
+        <div
+          className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur md:hidden"
+          style={{ paddingTop: "max(12px, env(safe-area-inset-top))", paddingBottom: "12px" }}
+        >
           <Link
             href="/"
             data-testid="link-logo-mobile"
@@ -128,15 +137,66 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
             <span className="font-semibold">PocketSets</span>
           </Link>
-          <FestivalClock nowMs={nowMs} isSimulated={isSimulated} compact />
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="flex items-center gap-1.5 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              aria-label="More options"
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+
+            {menuOpen && (
+              <>
+                {/* Backdrop */}
+                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                {/* Dropdown panel */}
+                <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-border bg-background/95 shadow-xl backdrop-blur">
+                  {/* Festival clock */}
+                  <div className="border-b border-border px-4 py-3">
+                    <FestivalClock nowMs={nowMs} isSimulated={isSimulated} compact />
+                  </div>
+                  {/* Extra nav items */}
+                  {NAV.slice(5).map((n) => {
+                    const active = isActive(location, n.to);
+                    const Icon = n.icon;
+                    const badge =
+                      n.to === "/announcements" && alertCount > 0 ? alertCount : null;
+                    return (
+                      <Link
+                        key={n.to}
+                        href={n.to}
+                        className={cn(
+                          "flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-secondary",
+                          active ? "text-primary font-medium" : "text-foreground",
+                        )}
+                      >
+                        <span className="flex items-center gap-3">
+                          <Icon className="h-4 w-4" />
+                          {n.label}
+                        </span>
+                        {badge !== null && (
+                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            {badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </div>
         {children}
       </main>
 
-      {/* Mobile bottom navigation */}
+      {/* Mobile bottom navigation — padded for home indicator */}
       <nav
         aria-label="Primary"
         className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-border bg-sidebar/95 backdrop-blur md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {NAV.slice(0, 5).map((n) => {
           const active = isActive(location, n.to);

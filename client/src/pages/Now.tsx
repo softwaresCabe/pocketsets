@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowRight, Calendar, PartyPopper, Sparkles, Star } from "lucide-react";
+import { ArrowRight, Calendar, MapPin, PartyPopper, Sparkles, Star } from "lucide-react";
 import { useFestival, useSets, useStages, useAnnouncements, useSettings } from "@/lib/api";
 import { useNow } from "@/lib/now";
 import {
@@ -136,6 +136,16 @@ function LiveView({
 
   return (
     <>
+      <Link
+        href="/map"
+        data-testid="link-live-map"
+        className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 hover-elevate"
+      >
+        <MapPin className="h-4 w-4 flex-shrink-0 text-primary" />
+        <span className="text-sm font-medium">Festival Map</span>
+        <ArrowRight className="ml-auto h-4 w-4 flex-shrink-0 text-muted-foreground" />
+      </Link>
+
       {liveFavs.length > 0 && (
         <section className="mb-8">
           <SectionHeader title="Now playing · your favorites" icon={Sparkles} />
@@ -314,6 +324,9 @@ function CountdownView({
             <Link className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-5 py-2.5 text-sm font-medium text-foreground hover-elevate" href="/my-sets" data-testid="link-hero-my-sets">
                 My Sets ({favCount})
             </Link>
+            <Link className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-5 py-2.5 text-sm font-medium text-foreground hover-elevate" href="/map" data-testid="link-hero-map">
+                <MapPin className="h-4 w-4" /> View Map
+            </Link>
           </div>
         </div>
       </div>
@@ -342,7 +355,12 @@ function DayPreview({ day, sets }: { day: "fri" | "sat" | "sun"; sets: SetWithDe
   }[day];
   const favs = daySets.filter((s) => s.isFavorite).length;
   return (
-    <Link className="group relative block overflow-hidden rounded-xl border border-border bg-card p-5 hover-elevate" href={`/schedule#${day}`} data-testid={`card-day-${day}`}>
+    <Link
+      className="group relative block overflow-hidden rounded-xl border border-border bg-card p-5 hover-elevate"
+      href="/schedule"
+      onClick={() => sessionStorage.setItem("scheduleDay", day)}
+      data-testid={`card-day-${day}`}
+    >
         <div className="flex items-baseline justify-between">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-primary">

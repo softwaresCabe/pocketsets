@@ -6,11 +6,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { findConflicts, suggestWinner } from "@/lib/conflicts";
 import { useFavoriteToggle } from "@/lib/useFavoriteToggle";
 import { Button } from "@/components/ui/button";
-import { formatDayTimePT, humanMinutes } from "@/lib/time";
+import { formatDayTimePT, humanMinutes, getCurrentFestivalDay } from "@/lib/time";
+import { useNow } from "@/lib/now";
 
 export default function MySetsPage() {
   const { data: sets, isLoading } = useSets();
   const { trigger: removeFav, dialog: removeDialog } = useFavoriteToggle();
+  const { nowMs } = useNow();
+  const todayDay = getCurrentFestivalDay(nowMs);
 
   if (isLoading || !sets) {
     return (
@@ -123,13 +126,25 @@ export default function MySetsPage() {
       )}
 
       <section className="mt-10 space-y-8">
-        {(["fri", "sat", "sun"] as const).map((day) =>
+        {(["fri", "sat", "sun"] as const)
+          .slice()
+          .sort((a, b) => {
+            if (a === todayDay) return -1;
+            if (b === todayDay) return 1;
+            return 0;
+          })
+          .map((day) =>
           grouped[day].length === 0 ? null : (
             <div key={day}>
               <div className="flex items-baseline justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   {{ fri: "Friday · May 15", sat: "Saturday · May 16", sun: "Sunday · May 17" }[day]}
+                  {day === todayDay && (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
+                      Today
+                    </span>
+                  )}
                 </h2>
                 <div className="text-xs tabular text-muted-foreground">
                   {grouped[day].length} set{grouped[day].length === 1 ? "" : "s"}
