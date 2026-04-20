@@ -1,0 +1,774 @@
+/**
+ * Seed the PocketSets database with the EDC Las Vegas 2026 lineup.
+ * Artist → stage/day assignments sourced from Insomniac's official lineup page.
+ * Set times are intentionally null — update when Insomniac publishes the schedule.
+ */
+import { db } from "./storage";
+import {
+  festivals,
+  stages,
+  artists,
+  sets,
+  announcements,
+  userSettings,
+} from "@shared/schema";
+
+const FESTIVAL_ID = "edc-lv-2026";
+
+type StageSeed = {
+  id: string;
+  name: string;
+  shortCode: string;
+  color: string;
+  genreFocus: string;
+  description: string;
+  displayOrder: number;
+};
+
+const STAGES: StageSeed[] = [
+  {
+    id: "kinetic-field",
+    name: "kineticFIELD",
+    shortCode: "KIN",
+    color: "#A855F7",
+    genreFocus: "Main stage · Big room · Mainstage house",
+    description:
+      "The mothership. The largest mainstage in North America — where headliners drop under a cathedral of pyro and lasers.",
+    displayOrder: 0,
+  },
+  {
+    id: "cosmic-meadow",
+    name: "cosmicMEADOW",
+    shortCode: "COS",
+    color: "#F59E0B",
+    genreFocus: "Open format · Bass · Electronic",
+    description:
+      "The open-format stage. Diverse bookings, surprise collabs, and a Ferris wheel backdrop.",
+    displayOrder: 1,
+  },
+  {
+    id: "circuit-grounds",
+    name: "circuitGROUNDS",
+    shortCode: "CIR",
+    color: "#06B6D4",
+    genreFocus: "Techno · Tech house · House",
+    description:
+      "Vast, driving, and relentless. The underground heartbeat of EDC.",
+    displayOrder: 2,
+  },
+  {
+    id: "neon-garden",
+    name: "neonGARDEN",
+    shortCode: "NEO",
+    color: "#10B981",
+    genreFocus: "Techno · Minimal · Deep house",
+    description:
+      "The hangar. Smoke-washed industrial aesthetics and four-on-the-floor until sunrise.",
+    displayOrder: 3,
+  },
+  {
+    id: "basspod",
+    name: "bassPOD",
+    shortCode: "BAS",
+    color: "#EF4444",
+    genreFocus: "Dubstep · Riddim · Bass music · DnB",
+    description:
+      "The headbangers' home. Wall-to-wall subwoofers and a dome that pulses with every drop.",
+    displayOrder: 4,
+  },
+  {
+    id: "wasteland",
+    name: "wasteLAND",
+    shortCode: "WAS",
+    color: "#DC2626",
+    genreFocus: "Hardstyle · Hard dance · Hardcore",
+    description:
+      "The pit. Raw, relentless, and built for the hardstyle faithful.",
+    displayOrder: 5,
+  },
+  {
+    id: "quantum-valley",
+    name: "quantumVALLEY",
+    shortCode: "QUA",
+    color: "#8B5CF6",
+    genreFocus: "Trance · Progressive · Psytrance",
+    description:
+      "Euphoric arcs and uplifting builds stretching from sunset to sunrise.",
+    displayOrder: 6,
+  },
+  {
+    id: "stereo-bloom",
+    name: "stereoBLOOM",
+    shortCode: "STE",
+    color: "#EC4899",
+    genreFocus: "House · Tech house · Bass house",
+    description:
+      "The boutique stage. Groovy, intimate, and always stacked with talent.",
+    displayOrder: 7,
+  },
+  {
+    id: "bionic-jungle",
+    name: "bionicJUNGLE",
+    shortCode: "BIO",
+    color: "#22D3EE",
+    genreFocus: "Underground house · Techno · Experimental",
+    description:
+      "New for 2026. Deep cuts and curated underground selectors in an immersive environment.",
+    displayOrder: 8,
+  },
+];
+
+type ArtistSeed = {
+  id: string;
+  name: string;
+  imageHue: number;
+};
+
+// imageHue is a 0–359 value used to generate a deterministic avatar color.
+const ARTISTS: ArtistSeed[] = [
+  // Friday
+  { id: "1991", name: "1991", imageHue: 200 },
+  { id: "abana-b2b-juliet-mendoza", name: "Abana B2B Juliet Mendoza", imageHue: 320 },
+  { id: "adrian-mills", name: "Adrián Mills", imageHue: 45 },
+  { id: "adriatique", name: "Adriatique", imageHue: 210 },
+  { id: "adventure-club", name: "Adventure Club (Throwback Set)", imageHue: 180 },
+  { id: "anastazja", name: "Anastazja", imageHue: 280 },
+  { id: "argy", name: "Argy", imageHue: 160 },
+  { id: "atliens", name: "ATLiens", imageHue: 30 },
+  { id: "avalon-emerson", name: "Avalon Emerson", imageHue: 340 },
+  { id: "bou", name: "Bou", imageHue: 195 },
+  { id: "the-carry-nation", name: "The Carry Nation", imageHue: 270 },
+  { id: "the-chainsmokers", name: "The Chainsmokers", imageHue: 220 },
+  { id: "charlotte-de-witte", name: "Charlotte de Witte", imageHue: 175 },
+  { id: "chris-lorenzo", name: "Chris Lorenzo", imageHue: 55 },
+  { id: "cloudy", name: "Cloudy", imageHue: 215 },
+  { id: "cold-blue", name: "Cold Blue", imageHue: 240 },
+  { id: "cosmic-gate", name: "Cosmic Gate", imageHue: 260 },
+  { id: "culture-shock", name: "Culture Shock", imageHue: 10 },
+  { id: "cyclops", name: "Cyclops", imageHue: 135 },
+  { id: "darren-porter", name: "Darren Porter", imageHue: 245 },
+  { id: "darude", name: "Darude", imageHue: 50 },
+  { id: "deathpact", name: "Deathpact ∞ Deathpact", imageHue: 5 },
+  { id: "dj-tennis-b2b-chloe-caillet", name: "DJ Tennis B2B Chloé Caillet", imageHue: 130 },
+  { id: "domina", name: "DØMINA", imageHue: 350 },
+  { id: "dyen", name: "DYEN", imageHue: 190 },
+  { id: "eli-brown", name: "Eli Brown", imageHue: 100 },
+  { id: "fisher", name: "Fisher", imageHue: 25 },
+  { id: "gareth-emery", name: "Gareth Emery", imageHue: 250 },
+  { id: "ghengar", name: "Ghengar", imageHue: 120 },
+  { id: "gorillat", name: "GorillaT", imageHue: 80 },
+  { id: "gravedgr", name: "GRAVEDGR", imageHue: 355 },
+  { id: "heidi-lawden-b2b-masha-mar", name: "Heidi Lawden B2B Masha Mar", imageHue: 300 },
+  { id: "heyz", name: "HEYZ", imageHue: 140 },
+  { id: "i-hate-models", name: "I Hate Models", imageHue: 170 },
+  { id: "ilan-bluestone", name: "Ilan Bluestone", imageHue: 230 },
+  { id: "jackie-hollander", name: "Jackie Hollander", imageHue: 310 },
+  { id: "johannes-schuster", name: "Johannes Schuster", imageHue: 60 },
+  { id: "joseph-capriati", name: "Joseph Capriati", imageHue: 15 },
+  { id: "josh-baker", name: "Josh Baker", imageHue: 85 },
+  { id: "kai-wachi", name: "Kai Wachi", imageHue: 20 },
+  { id: "korolova", name: "Korolova", imageHue: 330 },
+  { id: "kuko", name: "KUKO", imageHue: 70 },
+  { id: "laidback-luke-b2b-chuckie", name: "Laidback Luke B2B Chuckie", imageHue: 40 },
+  { id: "level-up", name: "Level Up", imageHue: 155 },
+  { id: "levity", name: "Levity", imageHue: 205 },
+  { id: "luke-dean", name: "Luke Dean", imageHue: 90 },
+  { id: "luuk-van-dijk", name: "Luuk van Dijk", imageHue: 115 },
+  { id: "massimiliano-pagliara", name: "Massimiliano Pagliara", imageHue: 145 },
+  { id: "matty-ralph", name: "Matty Ralph", imageHue: 255 },
+  { id: "max-dean", name: "Max Dean", imageHue: 95 },
+  { id: "max-dean-b2b-luke-dean", name: "Max Dean B2B Luke Dean", imageHue: 105 },
+  { id: "meduza", name: "MEDUZA³", imageHue: 35 },
+  { id: "mestiza", name: "MËSTIZA", imageHue: 185 },
+  { id: "mph", name: "MPH", imageHue: 110 },
+  { id: "muzz", name: "MUZZ", imageHue: 75 },
+  { id: "nico-moreno", name: "Nico Moreno", imageHue: 165 },
+  { id: "notion", name: "Notion", imageHue: 225 },
+  { id: "obskur", name: "Obskür", imageHue: 275 },
+  { id: "omar-plus", name: "Omar+", imageHue: 315 },
+  { id: "the-outlaw", name: "The Outlaw", imageHue: 0 },
+  { id: "paramida", name: "PARAMIDA", imageHue: 290 },
+  { id: "paul-van-dyk", name: "Paul van Dyk", imageHue: 265 },
+  { id: "pegassi", name: "Pegassi", imageHue: 235 },
+  { id: "peggy-gou", name: "Peggy Gou", imageHue: 345 },
+  { id: "porter-robinson", name: "Porter Robinson (DJ Set)", imageHue: 125 },
+  { id: "ray-volpe", name: "Ray Volpe", imageHue: 150 },
+  { id: "rebekah", name: "Rebekah", imageHue: 170 },
+  { id: "riot", name: "RIOT", imageHue: 355 },
+  { id: "robert-hood", name: "Robert Hood", imageHue: 180 },
+  { id: "roddy-lima", name: "Roddy Lima", imageHue: 65 },
+  { id: "salute-b2b-chloe-caillet", name: "salute B2B Chloé Caillet", imageHue: 325 },
+  { id: "san-pacho", name: "San Pacho", imageHue: 55 },
+  { id: "sarah-de-warren", name: "Sarah de Warren", imageHue: 295 },
+  { id: "serafina", name: "Serafina", imageHue: 335 },
+  { id: "slamm", name: "SLAMM", imageHue: 10 },
+  { id: "sofi-tukker", name: "Sofi Tukker", imageHue: 355 },
+  { id: "stacy-christine", name: "Stacy Christine", imageHue: 305 },
+  { id: "stan-christ", name: "Stan Christ", imageHue: 20 },
+  { id: "toman", name: "Toman", imageHue: 200 },
+  { id: "underworld", name: "Underworld", imageHue: 215 },
+  { id: "walker-and-royce-b2b-vnssa", name: "Walker & Royce B2B VNSSA", imageHue: 130 },
+  { id: "westend", name: "Westend", imageHue: 45 },
+  { id: "wooli", name: "Wooli", imageHue: 25 },
+  // Saturday
+  { id: "above-and-beyond", name: "Above & Beyond (Sunrise Set)", imageHue: 250 },
+  { id: "ahmed-spins", name: "Ahmed Spins", imageHue: 160 },
+  { id: "alyssa-jolee", name: "Alyssa Jolee", imageHue: 315 },
+  { id: "andrew-rayel", name: "Andrew Rayel", imageHue: 245 },
+  { id: "arco", name: "AR/CO", imageHue: 30 },
+  { id: "astrix", name: "Astrix", imageHue: 145 },
+  { id: "audiofreq-b2b-code-black-b2b-toneshifterz", name: "Audiofreq B2B Code Black B2B Toneshifterz", imageHue: 355 },
+  { id: "avello-b2b-dennett", name: "AVELLO B2B Dennett", imageHue: 110 },
+  { id: "bad-boombox-b2b-ollie-lishman", name: "Bad Boombox B2B Ollie Lishman", imageHue: 80 },
+  { id: "bashkka-b2b-sedef-adasi", name: "Bashkka B2B Sedef Adasï", imageHue: 290 },
+  { id: "baugruppe90", name: "BAUGRUPPE90", imageHue: 175 },
+  { id: "benwal", name: "Benwal", imageHue: 125 },
+  { id: "billy-gillies", name: "Billy Gillies", imageHue: 240 },
+  { id: "bolo", name: "BOLO (Sunrise Set)", imageHue: 95 },
+  { id: "boys-noize", name: "Boys Noize", imageHue: 5 },
+  { id: "bunt", name: "BUNT. (In The Round)", imageHue: 50 },
+  { id: "cid", name: "CID", imageHue: 70 },
+  { id: "club-angel", name: "Club Angel", imageHue: 275 },
+  { id: "cutdwn", name: "CUTDWN", imageHue: 15 },
+  { id: "da-tweekaz", name: "Da Tweekaz", imageHue: 355 },
+  { id: "dead-x", name: "Dead X", imageHue: 0 },
+  { id: "delta-heavy", name: "Delta Heavy", imageHue: 195 },
+  { id: "discip", name: "Discip", imageHue: 115 },
+  { id: "dj-gigola-b2b-mcr-t", name: "DJ Gigola B2B MCR-T", imageHue: 60 },
+  { id: "dj-mandy", name: "DJ Mandy", imageHue: 340 },
+  { id: "doctor-p-b2b-flux-pavilion-b2b-funtcase", name: "Doctor P B2B Flux Pavilion B2B FuntCase", imageHue: 10 },
+  { id: "dreya-v", name: "DREYA V", imageHue: 285 },
+  { id: "eptic-b2b-space-laces", name: "Eptic B2B Space Laces", imageHue: 140 },
+  { id: "fallen-with-mc-dino", name: "Fallen with MC Dino", imageHue: 20 },
+  { id: "frost-children", name: "Frost Children", imageHue: 210 },
+  { id: "getter", name: "Getter", imageHue: 35 },
+  { id: "haai-b2b-luke-alessi", name: "HAAi B2B Luke Alessi", imageHue: 150 },
+  { id: "hannah-laing", name: "Hannah Laing", imageHue: 330 },
+  { id: "hardwell", name: "Hardwell", imageHue: 230 },
+  { id: "hayla", name: "HAYLA", imageHue: 300 },
+  { id: "hntr", name: "HNTR", imageHue: 90 },
+  { id: "hol", name: "HOL!", imageHue: 40 },
+  { id: "hybrid-minds", name: "Hybrid Minds", imageHue: 185 },
+  { id: "interplanetary-criminal", name: "Interplanetary Criminal", imageHue: 75 },
+  { id: "john-summit", name: "John Summit", imageHue: 55 },
+  { id: "josh-baker-b2b-kettama-b2b-prospa", name: "Josh Baker B2B KETTAMA B2B Prospa", imageHue: 100 },
+  { id: "kaskade", name: "Kaskade", imageHue: 220 },
+  { id: "kettama", name: "KETTAMA", imageHue: 165 },
+  { id: "lady-faith-b2b-lny-tnz", name: "Lady Faith B2B LNY TNZ", imageHue: 345 },
+  { id: "lil-texas", name: "Lil Texas", imageHue: 25 },
+  { id: "lilly-palmer", name: "Lilly Palmer", imageHue: 310 },
+  { id: "luciano", name: "Luciano", imageHue: 135 },
+  { id: "maddix", name: "Maddix", imageHue: 255 },
+  { id: "malugi", name: "MALUGI", imageHue: 105 },
+  { id: "maria-healy", name: "Maria Healy", imageHue: 320 },
+  { id: "mary-droppinz", name: "Mary Droppinz", imageHue: 355 },
+  { id: "mathame", name: "Mathame", imageHue: 170 },
+  { id: "mcr-t", name: "MCR-T", imageHue: 65 },
+  { id: "mink", name: "mink", imageHue: 260 },
+  { id: "mish", name: "Mish", imageHue: 295 },
+  { id: "noizu", name: "Noizu", imageHue: 85 },
+  { id: "omnom", name: "OMNOM", imageHue: 120 },
+  { id: "paul-oakenfold", name: "Paul Oakenfold", imageHue: 235 },
+  { id: "peggy-gou-b2b-ki-ki", name: "Peggy Gou B2B KI/KI", imageHue: 350 },
+  { id: "player-dave", name: "Player Dave", imageHue: 155 },
+  { id: "the-prodigy", name: "The Prodigy", imageHue: 5 },
+  { id: "prospa", name: "Prospa", imageHue: 190 },
+  { id: "rob-gee-b2b-lenny-dee", name: "Rob Gee B2B Lenny Dee", imageHue: 0 },
+  { id: "roz", name: "RØZ", imageHue: 270 },
+  { id: "the-saints", name: "The Saints", imageHue: 30 },
+  { id: "sammy-virji", name: "Sammy Virji", imageHue: 45 },
+  { id: "silvie-loto", name: "Silvie Loto", imageHue: 305 },
+  { id: "slugg", name: "Slugg", imageHue: 110 },
+  { id: "snow-strippers", name: "Snow Strippers", imageHue: 205 },
+  { id: "spray", name: "Spray", imageHue: 280 },
+  { id: "steve-aoki", name: "Steve Aoki", imageHue: 15 },
+  { id: "sub-focus", name: "Sub Focus", imageHue: 200 },
+  { id: "subtronics", name: "Subtronics", imageHue: 140 },
+  { id: "superstrings", name: "SUPERSTRINGS", imageHue: 250 },
+  { id: "t78", name: "T78", imageHue: 175 },
+  { id: "thomas-schumacher", name: "Thomas Schumacher", imageHue: 60 },
+  { id: "tiesto", name: "Tiësto", imageHue: 220 },
+  { id: "viperactive", name: "Viperactive", imageHue: 355 },
+  { id: "vtss", name: "VTSS (In The Round)", imageHue: 335 },
+  { id: "wax-motif", name: "Wax Motif", imageHue: 75 },
+  { id: "ydg", name: "YDG", imageHue: 95 },
+  // Sunday
+  { id: "999999999", name: "999999999", imageHue: 180 },
+  { id: "amc-with-mc-phantom", name: "A.M.C with MC Phantom", imageHue: 40 },
+  { id: "adiel", name: "Adiel", imageHue: 155 },
+  { id: "aeon-mode", name: "ÆON:MODE (Sunrise Set)", imageHue: 265 },
+  { id: "ahee-b2b-liquid-stranger", name: "AHEE B2B Liquid Stranger", imageHue: 130 },
+  { id: "alison-wonderland", name: "Alison Wonderland", imageHue: 340 },
+  { id: "alves", name: "Alves", imageHue: 145 },
+  { id: "anna", name: "ANNA", imageHue: 170 },
+  { id: "armin-van-buuren", name: "Armin van Buuren (Sunrise Set)", imageHue: 245 },
+  { id: "beltran", name: "Beltran", imageHue: 55 },
+  { id: "beltran-b2b-simas", name: "Beltran B2B Simas", imageHue: 65 },
+  { id: "black-tiger-sex-machine", name: "Black Tiger Sex Machine", imageHue: 5 },
+  { id: "boogie-t-b2b-distinct-motive", name: "Boogie T B2B Distinct Motive", imageHue: 30 },
+  { id: "cassian", name: "Cassian", imageHue: 115 },
+  { id: "chris-lorenzo-b2b-bullet-tooth", name: "Chris Lorenzo B2B Bullet Tooth", imageHue: 70 },
+  { id: "chris-stussy", name: "Chris Stussy", imageHue: 160 },
+  { id: "clawz", name: "Clawz", imageHue: 350 },
+  { id: "cloonee", name: "Cloonee", imageHue: 100 },
+  { id: "cristoph", name: "Cristoph", imageHue: 195 },
+  { id: "dabin", name: "Dabin", imageHue: 120 },
+  { id: "dj-gigola", name: "DJ Gigola", imageHue: 80 },
+  { id: "dj-isaac", name: "DJ Isaac", imageHue: 355 },
+  { id: "dj-tennis-b2b-red-axes", name: "DJ Tennis B2B Red Axes", imageHue: 140 },
+  { id: "eazybaked", name: "EAZYBAKED", imageHue: 25 },
+  { id: "eli-and-fur", name: "Eli & Fur", imageHue: 310 },
+  { id: "frankie-bones", name: "Frankie Bones", imageHue: 190 },
+  { id: "funk-tribu", name: "Funk Tribu", imageHue: 50 },
+  { id: "gravagerz", name: "GRAVAGERZ", imageHue: 10 },
+  { id: "griz-b2b-wooli", name: "GRiZ B2B Wooli", imageHue: 110 },
+  { id: "hamdi", name: "Hamdi", imageHue: 90 },
+  { id: "indira-paganotto", name: "Indira Paganotto", imageHue: 165 },
+  { id: "infekt-b2b-samplifire", name: "INFEKT B2B Samplifire", imageHue: 20 },
+  { id: "innellea", name: "Innellea", imageHue: 225 },
+  { id: "isabella", name: "ISAbella", imageHue: 285 },
+  { id: "kevin-de-vries", name: "Kevin de Vries", imageHue: 175 },
+  { id: "ki-ki", name: "KI/KI", imageHue: 325 },
+  { id: "kinahau", name: "KinAhau", imageHue: 275 },
+  { id: "klangkuenstler", name: "Klangkuenstler", imageHue: 185 },
+  { id: "klo", name: "KLO", imageHue: 105 },
+  { id: "kream", name: "KREAM", imageHue: 255 },
+  { id: "layton-giordani", name: "Layton Giordani", imageHue: 215 },
+  { id: "linska", name: "Linska", imageHue: 135 },
+  { id: "lu-re", name: "Lu.Re", imageHue: 295 },
+  { id: "martin-garrix", name: "Martin Garrix", imageHue: 230 },
+  { id: "massano", name: "Massano", imageHue: 200 },
+  { id: "morgan-seatree", name: "Morgan Seatree", imageHue: 85 },
+  { id: "murphys-law", name: "Murphy's Law", imageHue: 45 },
+  { id: "nico-moreno-b2b-holy-priest", name: "Nico Moreno B2B Holy Priest", imageHue: 155 },
+  { id: "nightstalker-with-mc-dino", name: "Nightstalker with MC Dino", imageHue: 0 },
+  { id: "nostalgix", name: "Nostalgix", imageHue: 330 },
+  { id: "peekaboo", name: "Peekaboo", imageHue: 35 },
+  { id: "the-purge", name: "The Purge", imageHue: 5 },
+  { id: "rebuke", name: "Rebūke", imageHue: 235 },
+  { id: "restricted", name: "Restricted", imageHue: 15 },
+  { id: "rooler", name: "Rooler", imageHue: 345 },
+  { id: "san-holo", name: "San Holo (Wholesome Riddim Set)", imageHue: 125 },
+  { id: "seven-lions", name: "Seven Lions", imageHue: 260 },
+  { id: "shingo-nakamura", name: "Shingo Nakamura", imageHue: 210 },
+  { id: "ship-wrek", name: "Ship Wrek", imageHue: 40 },
+  { id: "sidney-charles-b2b-bushbaby", name: "Sidney Charles B2B Bushbaby", imageHue: 150 },
+  { id: "sihk", name: "Sihk", imageHue: 355 },
+  { id: "silva-bumpa", name: "Silva Bumpa", imageHue: 60 },
+  { id: "sippy", name: "Sippy", imageHue: 115 },
+  { id: "skream", name: "Skream", imageHue: 195 },
+  { id: "solomun", name: "Solomun", imageHue: 170 },
+  { id: "sub-zero-project", name: "Sub Zero Project", imageHue: 355 },
+  { id: "tiga", name: "Tiga", imageHue: 145 },
+  { id: "tinlicker", name: "Tinlicker (DJ Set)", imageHue: 220 },
+  { id: "trace", name: "Trace", imageHue: 30 },
+  { id: "vieze-asbak", name: "Vieze Asbak", imageHue: 5 },
+  { id: "vintage-culture", name: "Vintage Culture", imageHue: 50 },
+  { id: "virtual-riot", name: "Virtual Riot", imageHue: 25 },
+  { id: "warface", name: "Warface", imageHue: 0 },
+  { id: "warung", name: "Warung", imageHue: 135 },
+  { id: "whethan", name: "Whethan", imageHue: 90 },
+  { id: "william-black", name: "William Black", imageHue: 210 },
+  { id: "yosuf", name: "Yosuf", imageHue: 355 },
+  { id: "zedd", name: "Zedd", imageHue: 240 },
+];
+
+// [stageId, artistId] — times TBD, will be populated when Insomniac publishes schedule
+type SetSlot = [stageId: string, artistId: string];
+
+const FRI: SetSlot[] = [
+  // kineticFIELD
+  ["kinetic-field", "argy"],
+  ["kinetic-field", "the-chainsmokers"],
+  ["kinetic-field", "charlotte-de-witte"],
+  ["kinetic-field", "chris-lorenzo"],
+  ["kinetic-field", "fisher"],
+  ["kinetic-field", "korolova"],
+  ["kinetic-field", "laidback-luke-b2b-chuckie"],
+  ["kinetic-field", "porter-robinson"],
+  ["kinetic-field", "sofi-tukker"],
+  // cosmicMEADOW
+  ["cosmic-meadow", "jackie-hollander"],
+  ["cosmic-meadow", "max-dean-b2b-luke-dean"],
+  ["cosmic-meadow", "meduza"],
+  ["cosmic-meadow", "mph"],
+  ["cosmic-meadow", "notion"],
+  ["cosmic-meadow", "roddy-lima"],
+  ["cosmic-meadow", "san-pacho"],
+  ["cosmic-meadow", "underworld"],
+  ["cosmic-meadow", "walker-and-royce-b2b-vnssa"],
+  ["cosmic-meadow", "westend"],
+  // circuitGROUNDS
+  ["circuit-grounds", "1991"],
+  ["circuit-grounds", "bou"],
+  ["circuit-grounds", "i-hate-models"],
+  ["circuit-grounds", "level-up"],
+  ["circuit-grounds", "levity"],
+  ["circuit-grounds", "nico-moreno"],
+  ["circuit-grounds", "the-outlaw"],
+  ["circuit-grounds", "ray-volpe"],
+  ["circuit-grounds", "wooli"],
+  // neonGARDEN
+  ["neon-garden", "adriatique"],
+  ["neon-garden", "anastazja"],
+  ["neon-garden", "dj-tennis-b2b-chloe-caillet"],
+  ["neon-garden", "eli-brown"],
+  ["neon-garden", "joseph-capriati"],
+  ["neon-garden", "mestiza"],
+  ["neon-garden", "peggy-gou"],
+  // bassPOD
+  ["basspod", "adventure-club"],
+  ["basspod", "atliens"],
+  ["basspod", "culture-shock"],
+  ["basspod", "cyclops"],
+  ["basspod", "deathpact"],
+  ["basspod", "ghengar"],
+  ["basspod", "gorillat"],
+  ["basspod", "heyz"],
+  ["basspod", "kai-wachi"],
+  ["basspod", "muzz"],
+  ["basspod", "riot"],
+  // wasteLAND
+  ["wasteland", "adrian-mills"],
+  ["wasteland", "cloudy"],
+  ["wasteland", "domina"],
+  ["wasteland", "dyen"],
+  ["wasteland", "gravedgr"],
+  ["wasteland", "johannes-schuster"],
+  ["wasteland", "kuko"],
+  ["wasteland", "rebekah"],
+  ["wasteland", "serafina"],
+  ["wasteland", "stan-christ"],
+  // quantumVALLEY
+  ["quantum-valley", "cold-blue"],
+  ["quantum-valley", "cosmic-gate"],
+  ["quantum-valley", "darren-porter"],
+  ["quantum-valley", "darude"],
+  ["quantum-valley", "gareth-emery"],
+  ["quantum-valley", "ilan-bluestone"],
+  ["quantum-valley", "matty-ralph"],
+  ["quantum-valley", "paul-van-dyk"],
+  ["quantum-valley", "pegassi"],
+  ["quantum-valley", "sarah-de-warren"],
+  // stereoBLOOM
+  ["stereo-bloom", "abana-b2b-juliet-mendoza"],
+  ["stereo-bloom", "josh-baker"],
+  ["stereo-bloom", "luke-dean"],
+  ["stereo-bloom", "luuk-van-dijk"],
+  ["stereo-bloom", "max-dean"],
+  ["stereo-bloom", "obskur"],
+  ["stereo-bloom", "omar-plus"],
+  ["stereo-bloom", "slamm"],
+  ["stereo-bloom", "toman"],
+  // bionicJUNGLE
+  ["bionic-jungle", "avalon-emerson"],
+  ["bionic-jungle", "the-carry-nation"],
+  ["bionic-jungle", "heidi-lawden-b2b-masha-mar"],
+  ["bionic-jungle", "massimiliano-pagliara"],
+  ["bionic-jungle", "paramida"],
+  ["bionic-jungle", "robert-hood"],
+  ["bionic-jungle", "salute-b2b-chloe-caillet"],
+  ["bionic-jungle", "stacy-christine"],
+];
+
+const SAT: SetSlot[] = [
+  // kineticFIELD
+  ["kinetic-field", "above-and-beyond"],
+  ["kinetic-field", "arco"],
+  ["kinetic-field", "hardwell"],
+  ["kinetic-field", "hayla"],
+  ["kinetic-field", "john-summit"],
+  ["kinetic-field", "kaskade"],
+  ["kinetic-field", "steve-aoki"],
+  ["kinetic-field", "sub-focus"],
+  ["kinetic-field", "subtronics"],
+  // cosmicMEADOW
+  ["cosmic-meadow", "bunt"],
+  ["cosmic-meadow", "dj-gigola-b2b-mcr-t"],
+  ["cosmic-meadow", "frost-children"],
+  ["cosmic-meadow", "hannah-laing"],
+  ["cosmic-meadow", "interplanetary-criminal"],
+  ["cosmic-meadow", "malugi"],
+  ["cosmic-meadow", "the-prodigy"],
+  ["cosmic-meadow", "snow-strippers"],
+  ["cosmic-meadow", "vtss"],
+  // circuitGROUNDS
+  ["circuit-grounds", "boys-noize"],
+  ["circuit-grounds", "dj-mandy"],
+  ["circuit-grounds", "kettama"],
+  ["circuit-grounds", "lilly-palmer"],
+  ["circuit-grounds", "peggy-gou-b2b-ki-ki"],
+  ["circuit-grounds", "roz"],
+  ["circuit-grounds", "sammy-virji"],
+  ["circuit-grounds", "tiesto"],
+  // neonGARDEN
+  ["neon-garden", "ahmed-spins"],
+  ["neon-garden", "josh-baker-b2b-kettama-b2b-prospa"],
+  ["neon-garden", "luciano"],
+  ["neon-garden", "mink"],
+  ["neon-garden", "prospa"],
+  ["neon-garden", "silvie-loto"],
+  // bassPOD
+  ["basspod", "avello-b2b-dennett"],
+  ["basspod", "delta-heavy"],
+  ["basspod", "doctor-p-b2b-flux-pavilion-b2b-funtcase"],
+  ["basspod", "eptic-b2b-space-laces"],
+  ["basspod", "fallen-with-mc-dino"],
+  ["basspod", "getter"],
+  ["basspod", "hol"],
+  ["basspod", "hybrid-minds"],
+  ["basspod", "mary-droppinz"],
+  ["basspod", "viperactive"],
+  ["basspod", "ydg"],
+  // wasteLAND
+  ["wasteland", "alyssa-jolee"],
+  ["wasteland", "audiofreq-b2b-code-black-b2b-toneshifterz"],
+  ["wasteland", "cutdwn"],
+  ["wasteland", "da-tweekaz"],
+  ["wasteland", "dead-x"],
+  ["wasteland", "lady-faith-b2b-lny-tnz"],
+  ["wasteland", "lil-texas"],
+  ["wasteland", "mish"],
+  ["wasteland", "rob-gee-b2b-lenny-dee"],
+  ["wasteland", "the-saints"],
+  // quantumVALLEY
+  ["quantum-valley", "andrew-rayel"],
+  ["quantum-valley", "astrix"],
+  ["quantum-valley", "billy-gillies"],
+  ["quantum-valley", "maddix"],
+  ["quantum-valley", "maria-healy"],
+  ["quantum-valley", "mathame"],
+  ["quantum-valley", "paul-oakenfold"],
+  ["quantum-valley", "superstrings"],
+  ["quantum-valley", "t78"],
+  ["quantum-valley", "thomas-schumacher"],
+  // stereoBLOOM
+  ["stereo-bloom", "bolo"],
+  ["stereo-bloom", "cid"],
+  ["stereo-bloom", "discip"],
+  ["stereo-bloom", "dreya-v"],
+  ["stereo-bloom", "hntr"],
+  ["stereo-bloom", "noizu"],
+  ["stereo-bloom", "omnom"],
+  ["stereo-bloom", "slugg"],
+  ["stereo-bloom", "wax-motif"],
+  // bionicJUNGLE
+  ["bionic-jungle", "bad-boombox-b2b-ollie-lishman"],
+  ["bionic-jungle", "bashkka-b2b-sedef-adasi"],
+  ["bionic-jungle", "baugruppe90"],
+  ["bionic-jungle", "benwal"],
+  ["bionic-jungle", "club-angel"],
+  ["bionic-jungle", "haai-b2b-luke-alessi"],
+  ["bionic-jungle", "mcr-t"],
+  ["bionic-jungle", "player-dave"],
+  ["bionic-jungle", "spray"],
+  ["bionic-jungle", "tiga"],
+];
+
+const SUN: SetSlot[] = [
+  // kineticFIELD
+  ["kinetic-field", "armin-van-buuren"],
+  ["kinetic-field", "cloonee"],
+  ["kinetic-field", "funk-tribu"],
+  ["kinetic-field", "griz-b2b-wooli"],
+  ["kinetic-field", "layton-giordani"],
+  ["kinetic-field", "martin-garrix"],
+  ["kinetic-field", "ship-wrek"],
+  ["kinetic-field", "trace"],
+  ["kinetic-field", "zedd"],
+  // cosmicMEADOW
+  ["cosmic-meadow", "alison-wonderland"],
+  ["cosmic-meadow", "black-tiger-sex-machine"],
+  ["cosmic-meadow", "dabin"],
+  ["cosmic-meadow", "gravagerz"],
+  ["cosmic-meadow", "nico-moreno-b2b-holy-priest"],
+  ["cosmic-meadow", "nostalgix"],
+  ["cosmic-meadow", "san-holo"],
+  ["cosmic-meadow", "seven-lions"],
+  ["cosmic-meadow", "william-black"],
+  // circuitGROUNDS
+  ["circuit-grounds", "anna"],
+  ["circuit-grounds", "beltran"],
+  ["circuit-grounds", "chris-stussy"],
+  ["circuit-grounds", "kevin-de-vries"],
+  ["circuit-grounds", "linska"],
+  ["circuit-grounds", "solomun"],
+  ["circuit-grounds", "vintage-culture"],
+  // neonGARDEN
+  ["neon-garden", "999999999"],
+  ["neon-garden", "adiel"],
+  ["neon-garden", "dj-gigola"],
+  ["neon-garden", "frankie-bones"],
+  ["neon-garden", "indira-paganotto"],
+  ["neon-garden", "ki-ki"],
+  ["neon-garden", "klangkuenstler"],
+  // bassPOD
+  ["basspod", "amc-with-mc-phantom"],
+  ["basspod", "aeon-mode"],
+  ["basspod", "ahee-b2b-liquid-stranger"],
+  ["basspod", "boogie-t-b2b-distinct-motive"],
+  ["basspod", "eazybaked"],
+  ["basspod", "infekt-b2b-samplifire"],
+  ["basspod", "nightstalker-with-mc-dino"],
+  ["basspod", "peekaboo"],
+  ["basspod", "sippy"],
+  ["basspod", "virtual-riot"],
+  ["basspod", "whethan"],
+  // wasteLAND
+  ["wasteland", "clawz"],
+  ["wasteland", "dj-isaac"],
+  ["wasteland", "the-purge"],
+  ["wasteland", "restricted"],
+  ["wasteland", "rooler"],
+  ["wasteland", "sihk"],
+  ["wasteland", "sub-zero-project"],
+  ["wasteland", "vieze-asbak"],
+  ["wasteland", "warface"],
+  ["wasteland", "yosuf"],
+  // quantumVALLEY
+  ["quantum-valley", "cassian"],
+  ["quantum-valley", "cristoph"],
+  ["quantum-valley", "eli-and-fur"],
+  ["quantum-valley", "innellea"],
+  ["quantum-valley", "kream"],
+  ["quantum-valley", "massano"],
+  ["quantum-valley", "rebuke"],
+  ["quantum-valley", "shingo-nakamura"],
+  ["quantum-valley", "tinlicker"],
+  ["quantum-valley", "warung"],
+  // stereoBLOOM
+  ["stereo-bloom", "chris-lorenzo-b2b-bullet-tooth"],
+  ["stereo-bloom", "hamdi"],
+  ["stereo-bloom", "klo"],
+  ["stereo-bloom", "lu-re"],
+  ["stereo-bloom", "morgan-seatree"],
+  ["stereo-bloom", "murphys-law"],
+  ["stereo-bloom", "sidney-charles-b2b-bushbaby"],
+  ["stereo-bloom", "silva-bumpa"],
+  ["stereo-bloom", "skream"],
+  // bionicJUNGLE
+  ["bionic-jungle", "alves"],
+  ["bionic-jungle", "beltran-b2b-simas"],
+  ["bionic-jungle", "dj-tennis-b2b-red-axes"],
+  ["bionic-jungle", "isabella"],
+  ["bionic-jungle", "kinahau"],
+];
+
+const ANNOUNCEMENTS = [
+  {
+    id: "a-welcome",
+    title: "Welcome to EDC Las Vegas 2026",
+    body: "Gates open Friday at 7pm PT. This companion works offline-first — favorite sets now, syncs when you're back on Wi-Fi.",
+    publishedAt: "2026-05-12T15:00:00-07:00",
+    severity: "info" as const,
+  },
+  {
+    id: "a-times-tbd",
+    title: "Set times coming soon",
+    body: "Insomniac hasn't published the official schedule yet. Artists and stages are confirmed — set times will appear here as soon as they drop.",
+    publishedAt: "2026-04-19T10:00:00-07:00",
+    severity: "info" as const,
+  },
+  {
+    id: "a-bionic-jungle",
+    title: "bionicJUNGLE debuts this year",
+    body: "A brand-new underground stage joins the lineup for 2026. Deep house, techno, and experimental selectors in an immersive environment.",
+    publishedAt: "2026-04-01T09:00:00-07:00",
+    severity: "info" as const,
+  },
+];
+
+export function seedDatabase(opts: { force?: boolean } = {}): void {
+  const existing = db.select().from(festivals).all();
+  if (existing.length > 0 && !opts.force) return;
+
+  try {
+    db.delete(sets).run();
+    db.delete(artists).run();
+    db.delete(stages).run();
+    db.delete(announcements).run();
+    db.delete(festivals).run();
+  } catch {
+    // tables may not exist yet — schema push runs first
+  }
+
+  db.insert(festivals)
+    .values({
+      id: FESTIVAL_ID,
+      name: "EDC Las Vegas 2026",
+      startDate: "2026-05-15",
+      endDate: "2026-05-17",
+      timezone: "America/Los_Angeles",
+      location: "Las Vegas Motor Speedway",
+      dataVersion: 1,
+    })
+    .run();
+
+  for (const s of STAGES) {
+    db.insert(stages)
+      .values({
+        id: s.id,
+        festivalId: FESTIVAL_ID,
+        name: s.name,
+        shortCode: s.shortCode,
+        color: s.color,
+        genreFocus: s.genreFocus,
+        description: s.description,
+        displayOrder: s.displayOrder,
+      })
+      .run();
+  }
+
+  for (const a of ARTISTS) {
+    db.insert(artists)
+      .values({
+        id: a.id,
+        name: a.name,
+        imageHue: a.imageHue,
+        bio: null,
+        genres: null,
+        country: null,
+        spotifyUrl: null,
+        appleMusicUrl: null,
+        soundcloudUrl: null,
+        instagramUrl: null,
+      })
+      .run();
+  }
+
+  const insertDay = (day: "fri" | "sat" | "sun", rows: SetSlot[]) => {
+    rows.forEach(([stageId, artistId], i) => {
+      db.insert(sets)
+        .values({
+          id: `${day}-${stageId}-${i}`,
+          festivalId: FESTIVAL_ID,
+          stageId,
+          artistId,
+          startTime: null,
+          endTime: null,
+          day,
+        })
+        .run();
+    });
+  };
+  insertDay("fri", FRI);
+  insertDay("sat", SAT);
+  insertDay("sun", SUN);
+
+  for (const ann of ANNOUNCEMENTS) {
+    db.insert(announcements).values(ann).run();
+  }
+
+  const defaults: Array<[string, string]> = [
+    ["leadTimeMinutes", "15"],
+    ["notifyNowPlaying", "true"],
+    ["simulatedTime", ""],
+  ];
+  for (const [k, v] of defaults) {
+    try {
+      db.insert(userSettings).values({ key: k, value: v }).run();
+    } catch {
+      // key already exists — leave user-set value
+    }
+  }
+}

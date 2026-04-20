@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ps -p 8478 -o pid,command)",
+      "Bash(npm install *)",
+      "Bash(npx vite *)",
+      "Bash(npx cap *)",
+      "Bash(git -C /Users/kevin/Desktop/Projects/PocketSets init)",
+      "Bash(git -C /Users/kevin/Desktop/Projects/PocketSets status)",
+      "Bash(gh auth *)"
+    ]
+  }
+}
