@@ -5,41 +5,198 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PocketSets Support</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      line-height: 1.6;
+      background: #faf8ff;
       color: #333;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    h1 {
-      color: #A855F7;
+
+    header {
+      background: linear-gradient(135deg, #7C3AED 0%, #A855F7 60%, #C084FC 100%);
+      color: white;
       text-align: center;
+      padding: 56px 24px 48px;
     }
-    .contact {
-      background: #f5f5f5;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
+
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
     }
-    a {
-      color: #A855F7;
+
+    header p {
+      font-size: 1.05rem;
+      opacity: 0.88;
+    }
+
+    main {
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+      flex: 1;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 12px rgba(120, 60, 220, 0.08);
+      border: 1px solid rgba(168, 85, 247, 0.1);
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #7C3AED;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.8rem;
+    }
+
+    .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f0eaff;
+    }
+
+    .contact-row:last-child { border-bottom: none; }
+
+    .contact-icon {
+      width: 38px;
+      height: 38px;
+      background: #f3eeff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .contact-row a {
+      color: #7C3AED;
       text-decoration: none;
+      font-weight: 500;
     }
-    a:hover {
-      text-decoration: underline;
+
+    .contact-row a:hover { text-decoration: underline; }
+
+    .contact-label {
+      font-size: 0.78rem;
+      color: #999;
+      margin-bottom: 1px;
+    }
+
+    ul.faq {
+      list-style: none;
+    }
+
+    ul.faq li {
+      padding: 14px 0;
+      border-bottom: 1px solid #f0eaff;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    ul.faq li:last-child { border-bottom: none; }
+
+    .faq-bullet {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #A855F7;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+
+    ul.faq li strong {
+      color: #444;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    ul.faq li span {
+      font-size: 0.92rem;
+      color: #666;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.82rem;
+      color: #aaa;
+      border-top: 1px solid #eee;
     }
   </style>
 </head>
 <body>
-  <h1>PocketSets Support</h1>
-  
-  <p>Need help with PocketSets? We're here to help!</p>
-  
-  <div class="contact">
-    <h2>Contact Us</h2>
-    <p><strong>Email:</strong> <a href="mailto:nivek2696@gmail.com">support@pocketsets    <p><strong>Email:</strong> <a href="mailto:nivek2696@gmail.com">supporof    <p><strongketsets" target="_blank">Report Issues</a></p>
-  </  </  </  </  </  </  </  </  </  </  </  </  </  </  </  </  </  <ns not  </  </  </  </  </  </  </  </ ice  </  </ation setting  </  </  </  </  </  </  </  </  </  </  </  </  </  </  </  </  </  <ns not  </  <r   </  </  </  </  </ <li><strong>Data not syncing:</strong> Check your internet connection<  </  </  </  </  <  </r more help, please contact us using the information above.</p>
+  <header>
+    <h1>PocketSets Support</h1>
+    <p>We're here to help — reach out any time.</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Contact Us</h2>
+      <div class="contact-row">
+        <div class="contact-icon">✉️</div>
+        <div>
+          <div class="contact-label">Email</div>
+          <a href="mailto:nivek2696@gmail.com">nivek2696@gmail.com</a>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-icon">🐙</div>
+        <div>
+          <div class="contact-label">GitHub</div>
+          <a href="https://github.com/softwaresCabe/pocketsets" target="_blank">Report an issue</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Common Issues</h2>
+      <ul class="faq">
+        <li>
+          <div class="faq-bullet"></div>
+          <div>
+            <strong>Notifications not working</strong>
+            <span>Check your device notification settings for PocketSets.</span>
+          </div>
+        </li>
+        <li>
+          <div class="faq-bullet"></div>
+          <div>
+            <strong>App crashes</strong>
+            <span>Try restarting the app or your device.</span>
+          </div>
+        </li>
+        <li>
+          <div class="faq-bullet"></div>
+          <div>
+            <strong>Data not syncing</strong>
+            <span>Check your internet connection and try again.</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 PocketSets &mdash; All rights reserved.
+  </footer>
 </body>
 </html>
