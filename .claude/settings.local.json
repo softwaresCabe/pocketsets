@@ -7,7 +7,18 @@
       "Bash(npx cap *)",
       "Bash(git -C /Users/kevin/Desktop/Projects/PocketSets init)",
       "Bash(git -C /Users/kevin/Desktop/Projects/PocketSets status)",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(npm uninstall *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData/App-*)",
+      "Read(//Users/kevin/Library/Developer/Xcode/DerivedData/**)",
+      "Bash(xargs ls *)",
+      "Bash(gh --version)",
+      "Bash(/opt/homebrew/bin/gh auth *)"
     ]
   }
 }

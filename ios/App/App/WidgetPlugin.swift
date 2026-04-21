@@ -18,14 +18,12 @@ public class WidgetDataPlugin: CAPPlugin, CAPBridgedPlugin {
     private let appGroupSuite = "group.com.pocketsets.app"
 
     @objc func updateWidgetData(_ call: CAPPluginCall) {
-        guard let data = call.getObject("data") else {
-            call.reject("Missing 'data' parameter")
+        guard let jsonString = call.getString("json") else {
+            call.reject("Missing 'json' parameter")
             return
         }
 
-        if let defaults = UserDefaults(suiteName: appGroupSuite),
-           let jsonData = try? JSONSerialization.data(withJSONObject: data, options: []),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
+        if let defaults = UserDefaults(suiteName: appGroupSuite) {
             defaults.set(jsonString, forKey: "widgetData")
             defaults.synchronize()
         }

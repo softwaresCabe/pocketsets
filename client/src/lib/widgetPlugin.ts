@@ -22,7 +22,7 @@ export interface WidgetDataPayload {
 }
 
 interface WidgetDataPlugin {
-  updateWidgetData(options: { data: WidgetDataPayload }): Promise<void>;
+  updateWidgetData(options: { json: string }): Promise<void>;
 }
 
 export const WidgetData = registerPlugin<WidgetDataPlugin>("WidgetData", {

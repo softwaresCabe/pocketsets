@@ -14,6 +14,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { SetWithDetails } from "@shared/schema";
 
+const DAY_ORDER = { fri: 0, sat: 1, sun: 2 } as const;
+
+function getCurrentFestivalDay(nowMs: number): "fri" | "sat" | "sun" | null {
+  const { date, hour } = partsInPT(new Date(nowMs).toISOString());
+  const effectiveDate = hour < 6 ? date - 1 : date;
+  if (effectiveDate === 15) return "fri";
+  if (effectiveDate === 16) return "sat";
+  if (effectiveDate === 17) return "sun";
+  return null;
+}
+
 export default function NowPage() {
   const { data: festival } = useFestival();
   const { data: sets, isLoading } = useSets();
@@ -30,7 +41,6 @@ export default function NowPage() {
   const festivalEndMs = toMs(`${festival.endDate}T28:00:00-07:00`);
   const isLive = nowMs >= festivalStartMs && nowMs < festivalEndMs;
 
-  // Now-playing banner: favorites that started within the last 5 minutes
   const nowPlayingEnabled = (settings?.nowPlayingNotifications ?? "true") === "true";
   const recentlyStarted = nowPlayingEnabled
     ? sets.filter((s) => {
@@ -42,11 +52,7 @@ export default function NowPage() {
     : [];
 
   return (
-    <PageShell
-      title="Now"
-      eyebrow={festival.name}
-      eyebrowColor="text-primary"
-    >
+    <PageShell title="Now" eyebrow={festival.name} eyebrowColor="text-primary">
       {recentlyStarted.map((s) => (
         <Link
           key={s.id}
@@ -103,15 +109,6 @@ export default function NowPage() {
   );
 }
 
-function getCurrentFestivalDay(nowMs: number): "fri" | "sat" | "sun" | null {
-  const { date, hour } = partsInPT(new Date(nowMs).toISOString());
-  const effectiveDate = hour < 6 ? date - 1 : date;
-  if (effectiveDate === 15) return "fri";
-  if (effectiveDate === 16) return "sat";
-  if (effectiveDate === 17) return "sun";
-  return null;
-}
-
 function LiveView({
   sets,
   stages,
@@ -129,13 +126,42 @@ function LiveView({
   const liveFavs = liveSets.filter((s) => s.isFavorite);
   const upcomingFavs = sets
     .filter((s) => s.isFavorite && s.startTime && toMs(s.startTime) > nowMs)
-    .sort((a, b) => toMs(a.startTime!) - toMs(b.startTime!))
-    .slice(0, 3);
+    .sort((a, b) => toMs(a.startTime!) - toMs(b.startTime!));
 
-  const sortedStages = [...stages].sort((a, b) => a.displayOrder - b.displayOrder);
+  const nextFav = upcomingFavs[0];
+  const moreUpcoming = upcomingFavs.slice(1, 3);
+
+  // Sort stages: live first, has-next-up second, dark/done last
+  const sortedStages = [...stages].sort((a, b) => {
+    const priority = (stage: any) => {
+      const isPlaying = sets.some(
+        (s) => s.stageId === stage.id && s.startTime && s.endTime &&
+          toMs(s.startTime) <= nowMs && toMs(s.endTime) > nowMs,
+      );
+      if (isPlaying) return 0;
+      const hasNext = currentDay && sets.some(
+        (s) => s.stageId === stage.id && s.day === currentDay && s.startTime && toMs(s.startTime) > nowMs,
+      );
+      if (hasNext) return 1;
+      return 2;
+    };
+    return priority(a) - priority(b) || a.displayOrder - b.displayOrder;
+  });
 
   return (
     <>
+      {/* Live pulse bar */}
+      <div className="mb-3 flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4">
+        <span className="relative flex h-3 w-3 flex-shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-400" />
+        </span>
+        <span className="text-sm font-semibold text-emerald-300">
+          {liveSets.length} {liveSets.length === 1 ? "set" : "sets"} live right now
+        </span>
+      </div>
+
+      {/* Map card */}
       <Link
         href="/map"
         data-testid="link-live-map"
@@ -146,6 +172,7 @@ function LiveView({
         <ArrowRight className="ml-auto h-4 w-4 flex-shrink-0 text-muted-foreground" />
       </Link>
 
+      {/* Now playing favorites */}
       {liveFavs.length > 0 && (
         <section className="mb-8">
           <SectionHeader title="Now playing · your favorites" icon={Sparkles} />
@@ -157,7 +184,61 @@ function LiveView({
         </section>
       )}
 
-      <section className="mb-8">
+      {/* Next favorite — prominent single card with countdown */}
+      {nextFav && (
+        <section className="mb-8">
+          <SectionHeader title="Up next in your lineup" icon={Calendar} />
+          <Link
+            href={`/sets/${nextFav.id}`}
+            className="mt-3 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-4 hover-elevate"
+            data-testid="card-next-fav"
+          >
+            <div
+              className="h-full w-1 min-h-[48px] rounded-full flex-shrink-0"
+              style={{ backgroundColor: nextFav.stage.color }}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-semibold text-foreground">{nextFav.artist.name}</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                <span style={{ color: nextFav.stage.color }}>{nextFav.stage.name}</span>
+                {" · "}
+                <span className="tabular">{formatTimePT(nextFav.startTime)}</span>
+              </div>
+            </div>
+            <div className="flex-shrink-0 text-right">
+              <div className="text-sm font-semibold tabular text-primary">
+                {humanMinutes(Math.ceil((toMs(nextFav.startTime!) - nowMs) / 60000))}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">away</div>
+            </div>
+          </Link>
+          {moreUpcoming.length > 0 && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {moreUpcoming.map((s) => (
+                <SetCard key={s.id} set={s} variant="row" showDay={false} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {!nextFav && liveFavs.length === 0 && (
+        <section className="mb-8">
+          <SectionHeader title="Up next in your lineup" icon={Calendar} />
+          <div className="mt-3 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
+            <PartyPopper className="mx-auto h-8 w-8 text-muted-foreground" />
+            <p className="mt-3 text-sm text-foreground">No more favorites tonight.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Open the{" "}
+              <Link className="text-primary hover:underline" href="/schedule">schedule</Link>
+              {" "}and tap a star to add sets.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* All stages */}
+      <section>
         <SectionHeader title="On stage right now" />
         <div className="mt-3 space-y-2">
           {sortedStages.map((stage) => {
@@ -170,36 +251,19 @@ function LiveView({
             const nextUp = daySets
               .filter((s) => s.startTime && toMs(s.startTime) > nowMs)
               .sort((a, b) => toMs(a.startTime!) - toMs(b.startTime!))[0];
+            const isDark = !playing && !nextUp;
             return (
-              <StageNowCard key={stage.id} stage={stage} playing={playing} nextUp={nextUp} nowMs={nowMs} />
+              <StageNowCard
+                key={stage.id}
+                stage={stage}
+                playing={playing}
+                nextUp={nextUp}
+                nowMs={nowMs}
+                isDark={isDark}
+              />
             );
           })}
         </div>
-      </section>
-
-      <section>
-        <SectionHeader title="Up next in your lineup" icon={Calendar} />
-        {upcomingFavs.length > 0 ? (
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {upcomingFavs.map((s) => (
-              <SetCard key={s.id} set={s} />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-3 rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
-            <PartyPopper className="mx-auto h-8 w-8 text-muted-foreground" />
-            <p className="mt-3 text-sm text-foreground">
-              {liveFavs.length > 0 ? "No more favorites tonight." : "No favorites added yet."}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Open the{" "}
-              <Link className="text-primary hover:underline" href="/schedule">
-                schedule
-              </Link>{" "}
-              and tap a star to add sets.
-            </p>
-          </div>
-        )}
       </section>
     </>
   );
@@ -210,11 +274,13 @@ function StageNowCard({
   playing,
   nextUp,
   nowMs,
+  isDark,
 }: {
   stage: any;
   playing: SetWithDetails | undefined;
   nextUp: SetWithDetails | undefined;
   nowMs: number;
+  isDark: boolean;
 }) {
   const href = playing ? `/sets/${playing.id}` : `/stages/${stage.id}`;
   const minsLeft = playing
@@ -225,15 +291,12 @@ function StageNowCard({
     <Link
       href={href}
       data-testid={`stage-now-${stage.id}`}
-      className="flex overflow-hidden rounded-xl border border-border bg-card hover-elevate"
+      className={`flex overflow-hidden rounded-xl border border-border bg-card hover-elevate transition-opacity ${isDark ? "opacity-40" : ""}`}
     >
       <div className="w-1 flex-shrink-0" style={{ backgroundColor: stage.color }} />
       <div className="flex min-w-0 flex-1 flex-col gap-1 px-4 py-3">
         <div className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: stage.color }}
-          >
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: stage.color }}>
             {stage.shortCode}
           </span>
           <span className="text-xs text-muted-foreground">{stage.name}</span>
@@ -290,6 +353,18 @@ function CountdownView({
 
   const favCount = sets.filter((s) => s.isFavorite).length;
 
+  const currentDay = getCurrentFestivalDay(nowMs);
+  const currentOrder = currentDay != null ? DAY_ORDER[currentDay] : -1;
+
+  const sortedDays = (["fri", "sat", "sun"] as const).slice().sort((a, b) => {
+    const rank = (d: "fri" | "sat" | "sun") => {
+      if (d === currentDay) return 0;
+      if (DAY_ORDER[d] > currentOrder) return 1;
+      return 2; // past
+    };
+    return rank(a) - rank(b) || DAY_ORDER[a] - DAY_ORDER[b];
+  });
+
   return (
     <>
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-8 md:p-10">
@@ -319,13 +394,13 @@ function CountdownView({
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover-elevate" href="/schedule" data-testid="link-hero-schedule">
-                Browse the schedule <ArrowRight className="h-4 w-4" />
+              Browse the schedule <ArrowRight className="h-4 w-4" />
             </Link>
             <Link className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-5 py-2.5 text-sm font-medium text-foreground hover-elevate" href="/my-sets" data-testid="link-hero-my-sets">
-                My Sets ({favCount})
+              My Sets ({favCount})
             </Link>
             <Link className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-5 py-2.5 text-sm font-medium text-foreground hover-elevate" href="/map" data-testid="link-hero-map">
-                <MapPin className="h-4 w-4" /> View Map
+              <MapPin className="h-4 w-4" /> View Map
             </Link>
           </div>
         </div>
@@ -334,61 +409,68 @@ function CountdownView({
       <section className="mt-10">
         <SectionHeader title="Three days, one speedway" />
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {(["fri", "sat", "sun"] as const).map((day) => (
-            <DayPreview key={day} day={day} sets={sets} />
-          ))}
+          {sortedDays.map((day) => {
+            const isPast = DAY_ORDER[day] < currentOrder;
+            return <DayPreview key={day} day={day} sets={sets} isPast={isPast} />;
+          })}
         </div>
       </section>
     </>
   );
 }
 
-function DayPreview({ day, sets }: { day: "fri" | "sat" | "sun"; sets: SetWithDetails[] }) {
+function DayPreview({
+  day,
+  sets,
+  isPast,
+}: {
+  day: "fri" | "sat" | "sun";
+  sets: SetWithDetails[];
+  isPast: boolean;
+}) {
   const daySets = sets.filter((s) => s.day === day);
   const headline = daySets.find(
     (s) => s.stage.id === "kinetic-field" && s.startTime && partsInPT(s.startTime).hour >= 22,
   );
   const DAY_MAP = {
-    fri: { label: "Friday", date: "May 15", tag: "Kickoff" },
-    sat: { label: "Saturday", date: "May 16", tag: "Peak" },
-    sun: { label: "Sunday", date: "May 17", tag: "Closing" },
+    fri: { label: "Day 1", date: "Friday · May 15", tag: "Kickoff" },
+    sat: { label: "Day 2", date: "Saturday · May 16", tag: "Peak" },
+    sun: { label: "Day 3", date: "Sunday · May 17", tag: "Closing" },
   }[day];
   const favs = daySets.filter((s) => s.isFavorite).length;
   return (
     <Link
-      className="group relative block overflow-hidden rounded-xl border border-border bg-card p-5 hover-elevate"
+      className={`group relative block overflow-hidden rounded-xl border border-border bg-card p-5 hover-elevate transition-opacity ${isPast ? "opacity-40" : ""}`}
       href="/schedule"
       onClick={() => sessionStorage.setItem("scheduleDay", day)}
       data-testid={`card-day-${day}`}
     >
-        <div className="flex items-baseline justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-primary">
-              {DAY_MAP.tag}
-            </div>
-            <div className="mt-1 text-xl font-semibold">{DAY_MAP.label}</div>
-            <div className="text-xs text-muted-foreground">{DAY_MAP.date}</div>
+      <div className="flex items-baseline justify-between">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-primary">
+            {DAY_MAP.tag}
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-semibold tabular">{daySets.length}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              sets
-            </div>
-          </div>
+          <div className="mt-1 text-xl font-semibold">{DAY_MAP.label}</div>
+          <div className="text-xs text-muted-foreground">{DAY_MAP.date}</div>
         </div>
-        {headline && (
-          <div className="mt-4 text-sm">
-            <span className="text-muted-foreground">Headlining kineticFIELD: </span>
-            <span className="font-medium text-foreground">{headline.artist.name}</span>
-          </div>
-        )}
-        {favs > 0 && (
-          <div className="mt-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1 text-primary">
-              <Sparkles className="h-3 w-3" /> {favs} favorite{favs === 1 ? "" : "s"} this day
-            </span>
-          </div>
-        )}
+        <div className="text-right">
+          <div className="text-2xl font-semibold tabular">{daySets.length}</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">sets</div>
+        </div>
+      </div>
+      {headline && (
+        <div className="mt-4 text-sm">
+          <span className="text-muted-foreground">Headlining kineticFIELD: </span>
+          <span className="font-medium text-foreground">{headline.artist.name}</span>
+        </div>
+      )}
+      {favs > 0 && (
+        <div className="mt-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1 text-primary">
+            <Sparkles className="h-3 w-3" /> {favs} favorite{favs === 1 ? "" : "s"} this day
+          </span>
+        </div>
+      )}
     </Link>
   );
 }
@@ -423,19 +505,19 @@ function SectionHeader({
   href?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
-  const content = (
+  return (
     <div className="flex items-center justify-between gap-3">
       <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
         {Icon && <Icon className="h-4 w-4 text-primary" />}
         {title}
       </h2>
       {href && (
-        <Link className="text-xs text-primary hover:underline" href={href}>View all
+        <Link className="text-xs text-primary hover:underline" href={href}>
+          View all
         </Link>
       )}
     </div>
   );
-  return content;
 }
 
 function PageShell({

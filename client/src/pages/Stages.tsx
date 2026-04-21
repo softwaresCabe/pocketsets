@@ -2,10 +2,13 @@ import { Link } from "wouter";
 import { useStages, useSets } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight } from "lucide-react";
+import { useNow } from "@/lib/now";
+import { formatTimePT } from "@/lib/time";
 
 export default function StagesPage() {
   const { data: stages, isLoading } = useStages();
   const { data: sets } = useSets();
+  const { nowMs } = useNow();
 
   if (isLoading || !stages || !sets) {
     return (
@@ -29,6 +32,12 @@ export default function StagesPage() {
         {stages.map((s) => {
           const stageSets = sets.filter((x) => x.stageId === s.id);
           const favCount = stageSets.filter((x) => x.isFavorite).length;
+          const liveSet = stageSets.find(
+            (x) => nowMs >= new Date(x.startTime).getTime() && nowMs < new Date(x.endTime).getTime(),
+          );
+          const nextSet = stageSets
+            .filter((x) => x.startTime && new Date(x.startTime).getTime() > nowMs)
+            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
           return (
             <Link className="group relative block overflow-hidden rounded-xl border border-border bg-card p-6 hover-elevate" key={s.id} href={`/stages/${s.id}`} data-testid={`card-stage-${s.id}`}>
                 <div
@@ -66,9 +75,28 @@ export default function StagesPage() {
                     )}
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-                  {s.description}
-                </p>
+                {liveSet ? (
+                  <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2">
+                    <span className="relative flex h-2 w-2 flex-shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                    </span>
+                    <span className="text-xs font-medium text-emerald-400 truncate">
+                      {liveSet.artist.name}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+                    {s.description}
+                  </p>
+                )}
+                {nextSet && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>Next:</span>
+                    <span className="font-medium text-foreground truncate">{nextSet.artist.name}</span>
+                    <span className="ml-auto flex-shrink-0 tabular">{formatTimePT(nextSet.startTime)}</span>
+                  </div>
+                )}
                 <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-foreground group-hover:text-primary">
                   View schedule <ArrowRight className="h-3.5 w-3.5" />
                 </div>

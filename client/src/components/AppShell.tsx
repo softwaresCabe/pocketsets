@@ -29,9 +29,9 @@ const NAV: NavItem[] = [
   { to: "/", label: "Now", icon: Home, testId: "link-now" },
   { to: "/my-sets", label: "My Sets", icon: Star, testId: "link-my-sets" },
   { to: "/schedule", label: "Schedule", icon: Calendar, testId: "link-schedule" },
-  { to: "/map", label: "Map", icon: MapPin, testId: "link-map" },
-  { to: "/lineup", label: "Lineup", icon: Users, testId: "link-lineup" },
   { to: "/stages", label: "Stages", icon: Radio, testId: "link-stages" },
+  { to: "/lineup", label: "Lineup", icon: Users, testId: "link-lineup" },
+  { to: "/map", label: "Map", icon: MapPin, testId: "link-map" },
   { to: "/announcements", label: "Alerts", icon: Bell, testId: "link-announcements" },
   { to: "/settings", label: "Settings", icon: Settings, testId: "link-settings" },
 ];
@@ -117,6 +117,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="border-t border-sidebar-border px-5 py-4 text-xs text-muted-foreground">
           <FestivalClock nowMs={nowMs} isSimulated={isSimulated} />
+          <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground/60">
+            Unofficial fan app. Not affiliated with Insomniac Events or EDC Las Vegas.
+          </p>
         </div>
       </aside>
 

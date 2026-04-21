@@ -24,8 +24,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Moon, Sun, RotateCcw, Clock, Bell, Wand2 } from "lucide-react";
+import { Moon, Sun, RotateCcw, Clock, Bell, Wand2, FlaskConical, Info } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 const LEAD_TIMES = [
   { value: "0", label: "At start time" },
@@ -40,11 +42,11 @@ const LEAD_TIMES = [
 // Preset simulated times so a demo user can instantly preview "during festival" state
 const SIM_PRESETS = [
   { label: "Live (real time)", value: "" },
-  { label: "Day 1 · Friday 9:00 PM", value: "2026-05-15T21:00:00-07:00" },
-  { label: "Day 1 · Friday 11:30 PM", value: "2026-05-15T23:30:00-07:00" },
-  { label: "Day 2 · Saturday 1:00 AM peak", value: "2026-05-16T01:00:00-07:00" },
-  { label: "Day 2 · Saturday 10:30 PM", value: "2026-05-16T22:30:00-07:00" },
-  { label: "Day 3 · Sunday 2:30 AM finale", value: "2026-05-17T02:30:00-07:00" },
+  { label: "Day 1 · 9:00 PM", value: "2026-05-15T21:00:00-07:00" },
+  { label: "Day 1 · 11:30 PM", value: "2026-05-15T23:30:00-07:00" },
+  { label: "Day 1 · 1:00 AM", value: "2026-05-16T01:00:00-07:00" },
+  { label: "Day 2 · 10:30 PM", value: "2026-05-16T22:30:00-07:00" },
+  { label: "Day 2 · 2:30 AM", value: "2026-05-17T02:30:00-07:00" },
 ];
 
 export default function Settings() {
@@ -109,6 +111,28 @@ export default function Settings() {
         },
       },
     );
+  };
+
+  const fireTestNotification = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      toast({ title: "Not available in browser", description: "Run on a physical device or simulator." });
+      return;
+    }
+    const { display } = await LocalNotifications.requestPermissions();
+    if (display !== "granted") {
+      toast({ title: "Permission denied", description: "Enable notifications in iOS Settings." });
+      return;
+    }
+    const fireAt = new Date(Date.now() + 5_000);
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 999999,
+        title: "Alesso in 15m",
+        body: "Starting at kineticFIELD",
+        schedule: { at: fireAt },
+      }],
+    });
+    toast({ title: "Test notification scheduled", description: "You'll see it in 5 seconds — lock your screen." });
   };
 
   const handleReset = () => {
@@ -273,6 +297,51 @@ export default function Settings() {
               Include a timezone offset. Festival runs on Pacific time (−07:00).
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Developer tools */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FlaskConical className="h-4 w-4" />
+            Developer tools
+          </CardTitle>
+          <CardDescription>
+            Test that notifications are wired up correctly on device.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={fireTestNotification} data-testid="button-test-notification">
+            Fire test notification in 5s
+          </Button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Lock your screen after tapping — notifications only appear when the app is backgrounded.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* About / Disclaimer */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="h-4 w-4" />
+            About PocketSets
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            PocketSets is an <span className="font-medium text-foreground">unofficial fan-made app</span> and
+            is not affiliated with, endorsed by, or connected to Insomniac Events or EDC Las Vegas in any way.
+          </p>
+          <p>
+            Artist names, stage names, and schedule information are used for fan reference purposes only.
+            All trademarks and copyrights belong to their respective owners.
+          </p>
+          <p className="text-xs">
+            For the official EDC Las Vegas experience, visit{" "}
+            <span className="font-medium text-foreground">edclasvegas.com</span>.
+          </p>
         </CardContent>
       </Card>
 
