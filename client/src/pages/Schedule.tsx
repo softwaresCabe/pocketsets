@@ -37,12 +37,13 @@ export default function SchedulePage() {
   const [day, setDay] = React.useState<Day>(() => {
     if (typeof window === "undefined") return "fri";
     const stored = sessionStorage.getItem("scheduleDay");
-    if (stored === "fri" || stored === "sat" || stored === "sun") {
-      sessionStorage.removeItem("scheduleDay");
-      return stored;
-    }
+    if (stored === "fri" || stored === "sat" || stored === "sun") return stored;
     return getCurrentFestivalDay(Date.now()) ?? "fri";
   });
+
+  React.useEffect(() => {
+    sessionStorage.setItem("scheduleDay", day);
+  }, [day]);
 
   const gridRef = React.useRef<HTMLDivElement | null>(null);
 

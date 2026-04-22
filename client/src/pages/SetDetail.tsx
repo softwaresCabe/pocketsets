@@ -1,4 +1,4 @@
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import { ArrowLeft, Bell, Clock, MapPin, Star } from "lucide-react";
 import { useSet, useSets, useSettings } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,7 @@ const LEAD_OPTIONS = [0, 5, 10, 15, 30, 45, 60];
 
 export default function SetDetailPage() {
   const params = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
   const { data: set, isLoading } = useSet(params.id);
   const { data: sets } = useSets();
   const { data: settings } = useSettings();
@@ -63,9 +64,13 @@ export default function SetDetailPage() {
 
   return (
     <Shell>
-      <Link className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground" href="/schedule" data-testid="link-back-schedule">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to schedule
-      </Link>
+      <button
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => window.history.length > 1 ? window.history.back() : navigate("/schedule")}
+        data-testid="link-back-schedule"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> Back
+      </button>
 
       <div
         className="relative mt-4 overflow-hidden rounded-2xl border border-border bg-card"

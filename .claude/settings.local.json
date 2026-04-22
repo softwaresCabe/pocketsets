@@ -18,7 +18,9 @@
       "Read(//Users/kevin/Library/Developer/Xcode/DerivedData/**)",
       "Bash(xargs ls *)",
       "Bash(gh --version)",
-      "Bash(/opt/homebrew/bin/gh auth *)"
+      "Bash(/opt/homebrew/bin/gh auth *)",
+      "Bash(npx @capacitor/assets --version)",
+      "Bash(npx @capacitor/assets generate --android)"
     ]
   }
 }
