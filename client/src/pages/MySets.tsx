@@ -1,4 +1,4 @@
-import { ArrowRight, Calendar, Radio } from "lucide-react";
+import { ArrowRight, Calendar, Radio, Star } from "lucide-react";
 import { Link } from "wouter";
 import { useSets } from "@/lib/api";
 import { SetCard } from "@/components/SetCard";
@@ -48,7 +48,7 @@ export default function MySetsPage() {
 
   const DAY_ORDER = { fri: 0, sat: 1, sun: 2 } as const;
   const todayOrder = todayDay != null ? DAY_ORDER[todayDay] : 3;
-  const isPastDay = (day: "fri" | "sat" | "sun") => DAY_ORDER[day] < todayOrder;
+  const isPastDay = (day: "fri" | "sat" | "sun") => todayDay != null && DAY_ORDER[day] < todayOrder;
 
   const grouped = {
     fri: favorites.filter((s) => s.day === "fri"),
@@ -60,7 +60,12 @@ export default function MySetsPage() {
     <Shell>
       {removeDialog}
       <div className="grid gap-3 sm:grid-cols-1">
-        <Stat label="Sets locked in" value={favorites.length} testId="stat-sets" />
+        <Stat
+          label="Sets locked in"
+          value={favorites.length}
+          testId="stat-sets"
+          sub={favorites.every((s) => !s.startTime) ? "Set times haven't been announced yet — your lineup is saved and ready." : undefined}
+        />
       </div>
 
       <Link
@@ -105,6 +110,7 @@ export default function MySetsPage() {
                   .slice()
                   .sort((a, b) => {
                     const phase = (s: typeof a) => {
+                      if (!s.startTime || !s.endTime) return 1;   // tbd → treat as upcoming
                       const start = new Date(s.startTime).getTime();
                       const end = new Date(s.endTime).getTime();
                       if (nowMs >= start && nowMs < end) return 0; // live
@@ -113,6 +119,7 @@ export default function MySetsPage() {
                     };
                     const pd = phase(a) - phase(b);
                     if (pd !== 0) return pd;
+                    if (!a.startTime || !b.startTime) return a.artist.name.localeCompare(b.artist.name);
                     return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
                   })
                   .map((s) => (
@@ -127,7 +134,7 @@ export default function MySetsPage() {
   );
 }
 
-function Stat({ label, value, testId }: { label: string; value: number | string; testId: string }) {
+function Stat({ label, value, testId, sub }: { label: string; value: number | string; testId: string; sub?: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -136,6 +143,9 @@ function Stat({ label, value, testId }: { label: string; value: number | string;
       <div className="mt-1 text-2xl font-semibold tabular" data-testid={testId}>
         {value}
       </div>
+      {sub && (
+        <div className="mt-1 text-[11px] text-muted-foreground">{sub}</div>
+      )}
     </div>
   );
 }

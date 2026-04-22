@@ -104,10 +104,12 @@ export interface IStorage {
   listStages(): Stage[];
   listArtists(): Artist[];
   listSets(): SetWithDetails[];
+  listRawSets(): SetRow[];
   getSet(id: string): SetWithDetails | undefined;
   getArtist(id: string): ArtistWithSets | undefined;
   getStage(id: string): StageWithSets | undefined;
   listAnnouncements(): Announcement[];
+  updateSetTimes(id: string, startTime: string | null, endTime: string | null): SetRow | undefined;
 
   listFavorites(): UserFavorite[];
   addFavorite(setId: string, customLeadTimeMinutes: number | null): UserFavorite;
@@ -157,6 +159,17 @@ export class DatabaseStorage implements IStorage {
     return rows
       .map((r) => decorateSet(r, stageMap, artistMap, favMap))
       .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
+  }
+
+  listRawSets(): SetRow[] {
+    return db.select().from(sets).all();
+  }
+
+  updateSetTimes(id: string, startTime: string | null, endTime: string | null): SetRow | undefined {
+    const existing = db.select().from(sets).where(eq(sets.id, id)).get();
+    if (!existing) return undefined;
+    db.update(sets).set({ startTime: startTime ?? null, endTime: endTime ?? null }).where(eq(sets.id, id)).run();
+    return { ...existing, startTime: startTime ?? null, endTime: endTime ?? null };
   }
 
   getSet(id: string): SetWithDetails | undefined {

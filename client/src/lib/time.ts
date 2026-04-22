@@ -81,6 +81,14 @@ export function humanMinutes(total: number): string {
   return `${sign}${h}h ${mm}m`;
 }
 
+function humanCountdown(mins: number): string {
+  if (mins >= 1440) {
+    const days = Math.ceil(mins / 1440);
+    return `${days}d`;
+  }
+  return humanMinutes(mins);
+}
+
 /** Return a human countdown like "Starting in 23m", "Live now", "Ended 2h ago", or "TBD". */
 export function relativeLabel(
   startIso: string | null | undefined,
@@ -94,14 +102,14 @@ export function relativeLabel(
   const end = toMs(endIso);
   if (nowMs < start) {
     const mins = Math.ceil((start - nowMs) / 60000);
-    return { phase: "upcoming", label: `Starting in ${humanMinutes(mins)}`, minutesDelta: mins };
+    return { phase: "upcoming", label: `Starting in ${humanCountdown(mins)}`, minutesDelta: mins };
   }
   if (nowMs < end) {
     const mins = Math.ceil((end - nowMs) / 60000);
     return { phase: "live", label: `Live now · ${humanMinutes(mins)} left`, minutesDelta: mins };
   }
   const mins = Math.floor((nowMs - end) / 60000);
-  return { phase: "past", label: `Ended ${humanMinutes(mins)} ago`, minutesDelta: mins };
+  return { phase: "past", label: `Ended ${humanCountdown(mins)} ago`, minutesDelta: mins };
 }
 
 /**

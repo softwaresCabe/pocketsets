@@ -678,6 +678,7 @@ const ANNOUNCEMENTS = [
   },
 ];
 
+
 export function seedDatabase(opts: { force?: boolean } = {}): void {
   const existing = db.select().from(festivals).all();
   if (existing.length > 0 && !opts.force) return;
@@ -737,10 +738,10 @@ export function seedDatabase(opts: { force?: boolean } = {}): void {
   }
 
   const insertDay = (day: "fri" | "sat" | "sun", rows: SetSlot[]) => {
-    rows.forEach(([stageId, artistId], i) => {
+    rows.forEach(([stageId, artistId]) => {
       db.insert(sets)
         .values({
-          id: `${day}-${stageId}-${i}`,
+          id: `${day}-${artistId}`,
           festivalId: FESTIVAL_ID,
           stageId,
           artistId,

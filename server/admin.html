@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PocketSets Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a14;
+      --surface: #12121f;
+      --surface2: #1a1a2e;
+      --border: #2a2a42;
+      --purple: #a855f7;
+      --purple-dim: #7c3aed;
+      --purple-glow: rgba(168,85,247,0.15);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --green: #10b981;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Password overlay ── */
+    #password-gate {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    #password-gate.hidden { display: none; }
+
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 360px;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(168,85,247,0.1);
+    }
+    .auth-card .logo {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+    .auth-card .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+    .auth-card input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .auth-card input:focus { border-color: var(--purple); }
+    .auth-card .error { color: var(--red); font-size: 12px; margin-bottom: 10px; min-height: 16px; }
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Main layout ── */
+    #app { display: none; }
+    #app.visible { display: block; }
+
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,10,20,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    header .logo {
+      font-size: 20px; font-weight: 800;
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      flex-shrink: 0;
+    }
+    header .badge {
+      background: var(--purple-glow);
+      border: 1px solid var(--purple-dim);
+      color: var(--purple);
+      border-radius: 100px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    header .spacer { flex: 1; }
+    header .stats { color: var(--muted); font-size: 12px; }
+
+    .btn-export {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .btn-export:hover { border-color: var(--purple); background: var(--purple-glow); }
+    .btn-export svg { width: 14px; height: 14px; }
+
+    /* ── Day tabs ── */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 20px 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      padding: 9px 20px;
+      border-radius: 8px 8px 0 0;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--muted);
+      border: 1px solid transparent;
+      border-bottom: none;
+      background: transparent;
+      transition: color 0.15s;
+      position: relative;
+      bottom: -1px;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--purple);
+      border-color: var(--border);
+      border-bottom-color: var(--bg);
+      background: var(--bg);
+    }
+    .tab .count {
+      background: var(--surface2);
+      border-radius: 100px;
+      padding: 1px 7px;
+      font-size: 11px;
+      margin-left: 6px;
+      color: var(--muted);
+    }
+    .tab.active .count { color: var(--purple); }
+
+    /* ── Content ── */
+    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .day-panel { display: none; }
+    .day-panel.active { display: block; }
+
+    /* ── Stage section ── */
+    .stage-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .stage-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .stage-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .stage-name { font-weight: 700; font-size: 13px; }
+    .stage-meta { color: var(--muted); font-size: 12px; margin-left: 4px; }
+    .stage-spacer { flex: 1; }
+    .btn-save-all {
+      background: var(--purple-glow);
+      border: 1px solid var(--purple-dim);
+      color: var(--purple);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-save-all:hover { background: rgba(168,85,247,0.25); }
+    .btn-save-all:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Set rows ── */
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      padding: 8px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    td {
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(168,85,247,0.04); }
+
+    .artist-name { font-weight: 500; }
+
+    input[type="datetime-local"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 5px 8px;
+      width: 170px;
+      outline: none;
+      transition: border-color 0.15s;
+      color-scheme: dark;
+    }
+    input[type="datetime-local"]:focus { border-color: var(--purple); }
+    input[type="datetime-local"].dirty { border-color: var(--amber); }
+
+    .btn-save-row {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .btn-save-row:hover { border-color: var(--green); color: var(--green); }
+    .btn-save-row.dirty { border-color: var(--amber); color: var(--amber); }
+    .btn-save-row.saving { opacity: 0.5; cursor: default; }
+    .btn-save-row.saved { border-color: var(--green); color: var(--green); }
+    .btn-save-row.error { border-color: var(--red); color: var(--red); }
+
+    /* ── Export modal ── */
+    #export-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    #export-modal.hidden { display: none; }
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: min(780px, 95vw);
+      max-height: 85vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 0 80px rgba(0,0,0,0.5);
+    }
+    .modal-header {
+      display: flex; align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .modal-header h2 { font-size: 16px; font-weight: 700; flex: 1; }
+    .modal-close {
+      background: transparent; border: none;
+      color: var(--muted); font-size: 20px;
+      cursor: pointer; padding: 4px;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
+    .modal-body p { color: var(--muted); font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
+    .modal-body ol { color: var(--muted); font-size: 13px; padding-left: 20px; margin-bottom: 14px; line-height: 1.8; }
+    .modal-body ol li code { color: var(--purple); background: var(--purple-glow); border-radius: 4px; padding: 1px 5px; font-family: monospace; }
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      overflow-x: auto;
+      font-size: 11px;
+      color: #a5b4fc;
+      font-family: "SF Mono", "Fira Code", monospace;
+      max-height: 280px;
+      overflow-y: auto;
+      white-space: pre;
+    }
+    .modal-footer {
+      display: flex; gap: 10px; justify-content: flex-end;
+      padding: 14px 22px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-copy {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-copy:hover { opacity: 0.9; }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { color: var(--text); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+      z-index: 300;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--green); color: var(--green); }
+    #toast.error { border-color: var(--red); color: var(--red); }
+
+    .loading-state {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-stage {
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    /* ── Stage warnings ── */
+    .stage-warnings:not(:empty) {
+      border-top: 1px solid var(--border);
+    }
+    .warning-item {
+      padding: 7px 16px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .warning-item + .warning-item {
+      border-top: 1px solid var(--border);
+    }
+    .warning-overlap {
+      color: var(--red);
+      background: rgba(239,68,68,0.06);
+    }
+    .warning-gap {
+      color: var(--amber);
+      background: rgba(245,158,11,0.06);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div id="password-gate">
+  <div class="auth-card">
+    <div class="logo">PocketSets</div>
+    <div class="subtitle">Admin — Set Times Editor</div>
+    <form id="auth-form">
+      <input type="password" id="pw-input" placeholder="Admin password" autocomplete="current-password" />
+      <div class="error" id="auth-error"></div>
+      <button type="submit" class="btn-primary" id="auth-btn">Unlock</button>
+    </form>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+  <header>
+    <span class="logo">PocketSets</span>
+    <span class="badge">Admin</span>
+    <span class="spacer"></span>
+    <span class="stats" id="header-stats"></span>
+    <button class="btn-export" id="export-btn">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 1v9M4 6l4 4 4-4M2 12v2h12v-2"/>
+      </svg>
+      Export for App
+    </button>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-day="fri">Friday <span class="count" id="count-fri">0</span></button>
+    <button class="tab" data-day="sat">Saturday <span class="count" id="count-sat">0</span></button>
+    <button class="tab" data-day="sun">Sunday <span class="count" id="count-sun">0</span></button>
+  </div>
+
+  <div class="content">
+    <div class="day-panel active" id="panel-fri"></div>
+    <div class="day-panel" id="panel-sat"></div>
+    <div class="day-panel" id="panel-sun"></div>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div id="export-modal" class="hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>Export ALL_SETS for seedData.ts</h2>
+      <button class="modal-close" id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <p>Copy this TypeScript array and replace the <code style="color:var(--purple);background:var(--purple-glow);border-radius:4px;padding:1px 5px;font-family:monospace">ALL_SETS</code> export in <code style="color:var(--purple);background:var(--purple-glow);border-radius:4px;padding:1px 5px;font-family:monospace">client/src/lib/seedData.ts</code>. Then rebuild and redeploy to push times to app users.</p>
+      <ol>
+        <li>Copy the code below</li>
+        <li>Open <code>client/src/lib/seedData.ts</code></li>
+        <li>Replace the entire <code>ALL_SETS</code> array with what's below</li>
+        <li>Bump <code>dataVersion</code> in the <code>FESTIVAL</code> object (e.g. <code>dataVersion: 2</code>)</li>
+        <li>Run <code>npm run build</code> then rebuild the native app</li>
+      </ol>
+      <pre id="export-code"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="modal-close-footer">Close</button>
+      <button class="btn-copy" id="copy-btn">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let adminPassword = sessionStorage.getItem('ps_admin_pw') || '';
+  let setsData = [];    // SetWithDetails[]
+  let dirty = new Map(); // setId → { startTime, endTime }
+
+  // Valid PT local time windows per festival day (7 PM → 6 AM next morning)
+  const DAY_BOUNDS = {
+    fri: { min: '2026-05-15T19:00', max: '2026-05-16T06:00' },
+    sat: { min: '2026-05-16T19:00', max: '2026-05-17T06:00' },
+    sun: { min: '2026-05-17T19:00', max: '2026-05-18T06:00' },
+  };
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const gate = document.getElementById('password-gate');
+  const appEl = document.getElementById('app');
+
+  document.getElementById('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw = document.getElementById('pw-input').value.trim();
+    if (!pw) return;
+    const btn = document.getElementById('auth-btn');
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    try {
+      const res = await fetch('/api/admin/sets', { headers: { 'x-admin-password': pw } });
+      if (res.status === 401) {
+        document.getElementById('auth-error').textContent = 'Wrong password. Try again.';
+        btn.disabled = false;
+        btn.textContent = 'Unlock';
+        return;
+      }
+      if (!res.ok) throw new Error('Server error');
+      setsData = await res.json();
+      adminPassword = pw;
+      sessionStorage.setItem('ps_admin_pw', pw);
+      gate.classList.add('hidden');
+      appEl.classList.add('visible');
+      renderAll();
+    } catch (err) {
+      document.getElementById('auth-error').textContent = 'Could not connect. Is the server running?';
+      btn.disabled = false;
+      btn.textContent = 'Unlock';
+    }
+  });
+
+  // Auto-unlock if password saved in session
+  if (adminPassword) {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/sets', { headers: { 'x-admin-password': adminPassword } });
+        if (res.ok) {
+          setsData = await res.json();
+          gate.classList.add('hidden');
+          appEl.classList.add('visible');
+          renderAll();
+        }
+      } catch { /* show gate */ }
+    })();
+  }
+
+  // ── Time helpers ──────────────────────────────────────────────────────────
+  // EDC LV is in America/Los_Angeles (PDT = UTC-7 in May)
+
+  function utcToInputPT(isoUtc) {
+    if (!isoUtc) return '';
+    const dt = new Date(isoUtc);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(dt);
+    const p = {};
+    parts.forEach(({ type, value }) => { p[type] = value; });
+    const hour = p.hour === '24' ? '00' : p.hour;
+    return `${p.year}-${p.month}-${p.day}T${hour}:${p.minute}`;
+  }
+
+  function inputPTToUtc(localStr) {
+    if (!localStr) return null;
+    const [datePart, timePart] = localStr.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, min] = timePart.split(':').map(Number);
+    // Convert PT (UTC-7 PDT) → UTC by adding 7 hours
+    return new Date(Date.UTC(year, month - 1, day, hour + 7, min)).toISOString();
+  }
+
+  function formatDisplayPT(isoUtc) {
+    if (!isoUtc) return '—';
+    return new Date(isoUtc).toLocaleString('en-US', {
+      timeZone: 'America/Los_Angeles',
+      weekday: 'short',
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const STAGE_ORDER = [
+    'kinetic-field','cosmic-meadow','circuit-grounds','neon-garden',
+    'basspod','wasteland','quantum-valley','stereo-bloom','bionic-jungle',
+  ];
+
+  function stageSort(a, b) {
+    return (STAGE_ORDER.indexOf(a) ?? 99) - (STAGE_ORDER.indexOf(b) ?? 99);
+  }
+
+  function renderAll() {
+    const days = ['fri', 'sat', 'sun'];
+    let totalWithTimes = 0;
+
+    days.forEach(day => {
+      const daySets = setsData.filter(s => s.day === day);
+      const withTimes = daySets.filter(s => s.startTime).length;
+      totalWithTimes += withTimes;
+
+      document.getElementById(`count-${day}`).textContent = `${withTimes}/${daySets.length}`;
+      renderDay(day, daySets);
+    });
+
+    const total = setsData.length;
+    document.getElementById('header-stats').textContent =
+      `${totalWithTimes} of ${total} sets have times`;
+  }
+
+  function renderDay(day, daySets) {
+    const panel = document.getElementById(`panel-${day}`);
+    panel.innerHTML = '';
+
+    // Group by stageId
+    const byStage = new Map();
+    daySets.forEach(s => {
+      if (!byStage.has(s.stageId)) byStage.set(s.stageId, []);
+      byStage.get(s.stageId).push(s);
+    });
+
+    const stageIds = [...byStage.keys()].sort(stageSort);
+
+    stageIds.forEach(stageId => {
+      const stageSets = byStage.get(stageId);
+      const stage = stageSets[0].stage;
+      const withTimes = stageSets.filter(s => s.startTime).length;
+
+      const section = document.createElement('div');
+      section.className = 'stage-section';
+      section.id = `stage-${day}-${stageId}`;
+
+      section.innerHTML = `
+        <div class="stage-header">
+          <span class="stage-dot" style="background:${stage.color}"></span>
+          <span class="stage-name">${stage.name}</span>
+          <span class="stage-meta">${withTimes}/${stageSets.length} timed</span>
+          <span class="stage-spacer"></span>
+          <button class="btn-save-all" data-stage="${stageId}" data-day="${day}">Save All</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:220px">Artist</th>
+              <th>Start (PT)</th>
+              <th>End (PT)</th>
+              <th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody-${day}-${stageId}"></tbody>
+        </table>
+        <div class="stage-warnings" id="warnings-${day}-${stageId}"></div>
+      `;
+
+      panel.appendChild(section);
+
+      const tbody = section.querySelector(`#tbody-${day}-${stageId}`);
+      stageSets
+        .sort((a, b) => (a.startTime ?? 'zzz').localeCompare(b.startTime ?? 'zzz'))
+        .forEach(s => renderSetRow(tbody, s, day));
+
+      checkStageWarnings(stageId, day);
+
+      section.querySelector('.btn-save-all').addEventListener('click', () => {
+        saveAllOnStage(stageId, day);
+      });
+    });
+
+    if (stageIds.length === 0) {
+      panel.innerHTML = '<div class="loading-state"><div class="spinner"></div>No sets found for this day.</div>';
+    }
+  }
+
+  function renderSetRow(tbody, set, day) {
+    const tr = document.createElement('tr');
+    tr.id = `row-${set.id}`;
+
+    const startVal = utcToInputPT(set.startTime);
+    const endVal = utcToInputPT(set.endTime);
+    const bounds = DAY_BOUNDS[day] || {};
+    const minAttr = bounds.min ? `min="${bounds.min}"` : '';
+    const maxAttr = bounds.max ? `max="${bounds.max}"` : '';
+
+    tr.innerHTML = `
+      <td><span class="artist-name">${escHtml(set.artist.name)}</span></td>
+      <td><input type="datetime-local" id="start-${set.id}" value="${startVal}" data-orig="${startVal}" ${minAttr} ${maxAttr} /></td>
+      <td><input type="datetime-local" id="end-${set.id}" value="${endVal}" data-orig="${endVal}" ${minAttr} ${maxAttr} /></td>
+      <td><button class="btn-save-row" id="save-${set.id}">Save</button></td>
+    `;
+
+    tbody.appendChild(tr);
+
+    const startInput = tr.querySelector(`#start-${set.id}`);
+    const endInput = tr.querySelector(`#end-${set.id}`);
+    const saveBtn = tr.querySelector(`#save-${set.id}`);
+
+    function markDirty() {
+      const changed = startInput.value !== startInput.dataset.orig || endInput.value !== endInput.dataset.orig;
+      startInput.classList.toggle('dirty', changed);
+      endInput.classList.toggle('dirty', changed);
+      saveBtn.classList.toggle('dirty', changed);
+      if (changed) saveBtn.textContent = 'Save';
+    }
+
+    startInput.addEventListener('change', markDirty);
+    endInput.addEventListener('change', markDirty);
+
+    saveBtn.addEventListener('click', () => saveRow(set.id));
+  }
+
+  // ── Overlap / gap checker ─────────────────────────────────────────────────
+  function checkStageWarnings(stageId, day) {
+    const el = document.getElementById(`warnings-${day}-${stageId}`);
+    if (!el) return;
+
+    const timed = setsData
+      .filter(s => s.stageId === stageId && s.day === day && s.startTime && s.endTime)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const issues = [];
+    for (let i = 0; i < timed.length - 1; i++) {
+      const curr = timed[i];
+      const next = timed[i + 1];
+      const diffMin = Math.round((new Date(next.startTime) - new Date(curr.endTime)) / 60000);
+      if (diffMin < 0) {
+        issues.push({ type: 'overlap', a: curr, b: next, minutes: Math.abs(diffMin) });
+      } else if (diffMin > 0) {
+        issues.push({ type: 'gap', a: curr, b: next, minutes: diffMin });
+      }
+    }
+
+    if (issues.length === 0) { el.innerHTML = ''; return; }
+
+    el.innerHTML = issues.map(({ type, a, b, minutes }) => {
+      const cls = type === 'overlap' ? 'warning-overlap' : 'warning-gap';
+      const icon = type === 'overlap' ? '⚠' : '↔';
+      const label = type === 'overlap'
+        ? `Overlap ${minutes}m: ${escHtml(a.artist.name)} ends ${formatDisplayPT(a.endTime)} — ${escHtml(b.artist.name)} starts ${formatDisplayPT(b.startTime)}`
+        : `Gap ${minutes}m: ${escHtml(a.artist.name)} ends ${formatDisplayPT(a.endTime)} — ${escHtml(b.artist.name)} starts ${formatDisplayPT(b.startTime)}`;
+      return `<div class="warning-item ${cls}">${icon} ${label}</div>`;
+    }).join('');
+  }
+
+  // ── Save logic ────────────────────────────────────────────────────────────
+  async function saveRow(setId) {
+    const startInput = document.getElementById(`start-${setId}`);
+    const endInput = document.getElementById(`end-${setId}`);
+    const saveBtn = document.getElementById(`save-${setId}`);
+
+    const startUtc = inputPTToUtc(startInput.value);
+    const endUtc = inputPTToUtc(endInput.value);
+
+    saveBtn.textContent = '…';
+    saveBtn.classList.remove('dirty', 'saved', 'error');
+    saveBtn.classList.add('saving');
+    saveBtn.disabled = true;
+
+    try {
+      const res = await fetch(`/api/admin/sets/${setId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': adminPassword,
+        },
+        body: JSON.stringify({ startTime: startUtc, endTime: endUtc }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      // Update local data
+      const idx = setsData.findIndex(s => s.id === setId);
+      if (idx !== -1) {
+        setsData[idx] = { ...setsData[idx], startTime: startUtc, endTime: endUtc };
+      }
+
+      startInput.dataset.orig = startInput.value;
+      endInput.dataset.orig = endInput.value;
+      startInput.classList.remove('dirty');
+      endInput.classList.remove('dirty');
+      saveBtn.classList.remove('saving', 'dirty');
+      saveBtn.classList.add('saved');
+      saveBtn.textContent = '✓ Saved';
+      saveBtn.disabled = false;
+
+      updateHeaderStats();
+      updateStageMeta(setId);
+      const saved = setsData.find(s => s.id === setId);
+      if (saved) checkStageWarnings(saved.stageId, saved.day);
+    } catch (err) {
+      saveBtn.classList.remove('saving');
+      saveBtn.classList.add('error');
+      saveBtn.textContent = 'Error';
+      saveBtn.disabled = false;
+      showToast('Save failed: ' + err.message, 'error');
+    }
+  }
+
+  async function saveAllOnStage(stageId, day) {
+    const stageSets = setsData.filter(s => s.stageId === stageId && s.day === day);
+    const btn = document.querySelector(`[data-stage="${stageId}"][data-day="${day}"]`);
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    let saved = 0;
+    for (const s of stageSets) {
+      const startInput = document.getElementById(`start-${s.id}`);
+      const endInput = document.getElementById(`end-${s.id}`);
+      if (!startInput) continue;
+      if (startInput.value === startInput.dataset.orig && endInput.value === endInput.dataset.orig) {
+        saved++;
+        continue; // unchanged
+      }
+      await saveRow(s.id);
+      saved++;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Save All';
+    showToast(`Saved ${saved} sets on ${setsData.find(s => s.stageId === stageId)?.stage.name ?? stageId}`, 'success');
+  }
+
+  function updateHeaderStats() {
+    const total = setsData.length;
+    const withTimes = setsData.filter(s => s.startTime).length;
+    document.getElementById('header-stats').textContent = `${withTimes} of ${total} sets have times`;
+
+    ['fri','sat','sun'].forEach(day => {
+      const daySets = setsData.filter(s => s.day === day);
+      const wt = daySets.filter(s => s.startTime).length;
+      document.getElementById(`count-${day}`).textContent = `${wt}/${daySets.length}`;
+    });
+  }
+
+  function updateStageMeta(setId) {
+    const set = setsData.find(s => s.id === setId);
+    if (!set) return;
+    const section = document.getElementById(`stage-${set.day}-${set.stageId}`);
+    if (!section) return;
+    const stageSets = setsData.filter(s => s.stageId === set.stageId && s.day === set.day);
+    const wt = stageSets.filter(s => s.startTime).length;
+    const meta = section.querySelector('.stage-meta');
+    if (meta) meta.textContent = `${wt}/${stageSets.length} timed`;
+  }
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  document.getElementById('export-btn').addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/admin/export-seed', {
+        headers: { 'x-admin-password': adminPassword },
+      });
+      if (!res.ok) throw new Error('Failed to fetch export');
+      const code = await res.text();
+      document.getElementById('export-code').textContent = code;
+      document.getElementById('export-modal').classList.remove('hidden');
+    } catch (err) {
+      showToast('Export failed: ' + err.message, 'error');
+    }
+  });
+
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const code = document.getElementById('export-code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      document.getElementById('copy-btn').textContent = '✓ Copied!';
+      setTimeout(() => { document.getElementById('copy-btn').textContent = 'Copy to Clipboard'; }, 2000);
+    });
+  });
+
+  function closeModal() { document.getElementById('export-modal').classList.add('hidden'); }
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-close-footer').addEventListener('click', closeModal);
+  document.getElementById('export-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('export-modal')) closeModal();
+  });
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    const day = tab.dataset.day;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.day-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${day}`).classList.add('active');
+  });
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = ''; }, 3000);
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>

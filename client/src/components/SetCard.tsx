@@ -52,12 +52,20 @@ export function SetCard({ set, variant = "card", showDay = false, highlighted = 
                     {set.stage.name}
                   </span>
                   <span>·</span>
-                  <span className="tabular">
-                    {showDay && `${DAY_LABEL[set.day]} `}
-                    {formatTimePT(set.startTime)} – {formatTimePT(set.endTime)}
-                  </span>
-                  <span>·</span>
-                  <span>{humanMinutes(duration)}</span>
+                  {set.startTime ? (
+                    <>
+                      <span className="tabular">
+                        {showDay && `${DAY_LABEL[set.day]} `}
+                        {formatTimePT(set.startTime)} – {formatTimePT(set.endTime)}
+                      </span>
+                      <span>·</span>
+                      <span>{humanMinutes(duration)}</span>
+                    </>
+                  ) : (
+                    <span className="tabular">
+                      {showDay && `${DAY_LABEL[set.day]} · `}Time TBD
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1.5">
@@ -129,7 +137,9 @@ export function SetCard({ set, variant = "card", showDay = false, highlighted = 
           </div>
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
             <span className="tabular">
-              {formatTimePT(set.startTime)} – {formatTimePT(set.endTime)} · {humanMinutes(duration)}
+              {set.startTime
+                ? `${formatTimePT(set.startTime)} – ${formatTimePT(set.endTime)} · ${humanMinutes(duration)}`
+                : "Time TBD"}
             </span>
             <PhaseTag phase={rel.phase} label={rel.label} compact />
           </div>
