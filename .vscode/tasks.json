@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "swift: Describe Package (android)",
+            "type": "shell",
+            "command": "swift",
+            "args": ["package", "describe", "--type", "json"],
+            "options": {
+                "cwd": "${workspaceFolder}/ios/App/CapApp-SPM"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

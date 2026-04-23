@@ -52,6 +52,7 @@ export default function SetDetailPage() {
   const overlappingFavs = (sets ?? [])
     .filter((s) => s.isFavorite && s.id !== set.id)
     .filter((s) => {
+      if (!set.startTime || !set.endTime || !s.startTime || !s.endTime) return false;
       const a1 = new Date(set.startTime).getTime();
       const a2 = new Date(set.endTime).getTime();
       const b1 = new Date(s.startTime).getTime();
@@ -234,11 +235,12 @@ export default function SetDetailPage() {
   );
 }
 
-function PhaseBadge({ phase, label }: { phase: "upcoming" | "live" | "past"; label: string }) {
+function PhaseBadge({ phase, label }: { phase: "upcoming" | "live" | "past" | "tbd"; label: string }) {
   const styles = {
     upcoming: "bg-primary/15 text-primary",
     live: "bg-emerald-500/15 text-emerald-400",
     past: "bg-secondary text-muted-foreground",
+    tbd: "bg-secondary text-muted-foreground",
   }[phase];
   return (
     <span

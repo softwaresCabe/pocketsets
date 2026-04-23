@@ -238,6 +238,7 @@ function StageColumn({
       {/* Set blocks */}
       {day &&
         sets.map((set) => {
+          if (!set.startTime || !set.endTime) return null;
           const top = 48 + minutesFromDayStart(set.startTime, day) * PX_PER_MINUTE;
           const height = Math.max(
             44,
@@ -284,7 +285,7 @@ function StageColumn({
 }
 
 function MobileSchedule({ sets }: { sets: SetWithDetails[] }) {
-  const sorted = [...sets].sort((a, b) => toMs(a.startTime) - toMs(b.startTime));
+  const sorted = [...sets].sort((a, b) => toMs(a.startTime ?? "") - toMs(b.startTime ?? ""));
   // Group by start-hour for readability
   const groups = new Map<string, SetWithDetails[]>();
   for (const s of sorted) {

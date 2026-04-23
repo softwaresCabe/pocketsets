@@ -14,33 +14,27 @@ export type ConflictNetwork = {
   artistNames: string[];
 };
 
-export type ConflictNetwork = {
-  sets: SetWithDetails[];
-  conflicts: Conflict[];
-  totalOverlapMinutes: number;
-  artistNames: string[];
-};
-
 export function findConflicts(favorited: SetWithDetails[]): Conflict[] {
   if (favorited.length < 2) return [];
 
-  const sorted = [...favorited].sort((x, y) => toMs(x.startTime) - toMs(y.startTime));
+  // Only consider sets with known times
+  const timed = favorited.filter(
+    (s): s is SetWithDetails & { startTime: string; endTime: string } =>
+      s.startTime !== null && s.endTime !== null,
+  );
+
+  const sorted = [...timed].sort((x, y) => toMs(x.startTime) - toMs(y.startTime));
   const conflicts: Conflict[] = [];
 
-  // Use a sliding window approach to reduce comparisons
-  // Only check sets that could potentially overlap based on their time windows
   for (let i = 0; i < sorted.length; i++) {
     const a = sorted[i];
     const aStart = toMs(a.startTime);
     const aEnd = toMs(a.endTime);
 
-    // Only check the next few sets that could overlap
-    // Since sets are sorted by start time, we can limit the search
     for (let j = i + 1; j < sorted.length && j < i + 10; j++) {
       const b = sorted[j];
       const bStart = toMs(b.startTime);
 
-      // If b starts after a ends, no more overlaps possible for this a
       if (bStart >= aEnd) break;
 
       const bEnd = toMs(b.endTime);
@@ -77,7 +71,7 @@ export function suggestWinner(
   const sA = score(conflict.a);
   const sB = score(conflict.b);
   if (sA === sB) {
-    const winner = toMs(conflict.a.startTime) <= toMs(conflict.b.startTime) ? conflict.a : conflict.b;
+    const winner = toMs(conflict.a.startTime ?? "") <= toMs(conflict.b.startTime ?? "") ? conflict.a : conflict.b;
     return { winner, reason: `tie — earlier start wins (${winner.artist.name})` };
   }
   const winner = sA > sB ? conflict.a : conflict.b;
@@ -90,20 +84,6 @@ export function suggestWinner(
   };
 }
 
-export type ConflictNetwork = {
-  sets: SetWithDetails[];
-  conflicts: Conflict[];
-  totalOverlapMinutes: number;
-  artistNames: string[];
-};
-
-export type ConflictNetwork = {
-  sets: SetWithDetails[];
-  conflicts: Conflict[];
-  totalOverlapMinutes: number;
-  artistNames: string[];
-};
-
 /**
  * Groups conflicts into networks where sets are connected through conflicts.
  * For example, if A conflicts with B and B conflicts with C, they're all in one network.
@@ -111,11 +91,9 @@ export type ConflictNetwork = {
 export function buildConflictNetworks(conflicts: Conflict[]): ConflictNetwork[] {
   if (conflicts.length === 0) return [];
 
-  // Build adjacency list: setId -> set of conflicting setIds
   const adjacencyList = new Map<string, Set<string>>();
   const setMap = new Map<string, SetWithDetails>();
 
-  // Initialize adjacency list and collect all sets
   conflicts.forEach(conflict => {
     const aId = conflict.a.id;
     const bId = conflict.b.id;
@@ -130,7 +108,6 @@ export function buildConflictNetworks(conflicts: Conflict[]): ConflictNetwork[] 
     setMap.set(bId, conflict.b);
   });
 
-  // Find connected components using DFS
   const visited = new Set<string>();
   const networks: ConflictNetwork[] = [];
 
@@ -143,10 +120,8 @@ export function buildConflictNetworks(conflicts: Conflict[]): ConflictNetwork[] 
 
     networkSets.push(set);
 
-    // Find all conflicts involving this set
     const neighbors = adjacencyList.get(setId) || new Set();
     neighbors.forEach(neighborId => {
-      // Find the conflict between setId and neighborId
       const conflict = conflicts.find(c =>
         (c.a.id === setId && c.b.id === neighborId) ||
         (c.a.id === neighborId && c.b.id === setId)
@@ -159,19 +134,18 @@ export function buildConflictNetworks(conflicts: Conflict[]): ConflictNetwork[] 
     });
   }
 
-  // Process each unvisited set
-  for (const setId of setMap.keys()) {
+  for (const setId of Array.from(setMap.keys())) {
     if (!visited.has(setId)) {
       const networkSets: SetWithDetails[] = [];
       const networkConflicts: Conflict[] = [];
       dfs(setId, networkSets, networkConflicts);
 
-      if (networkSets.length > 1) { // Only create networks with multiple sets
+      if (networkSets.length > 1) {
         const totalOverlap = networkConflicts.reduce((sum, c) => sum + c.overlapMinutes, 0);
-        const artistNames = [...new Set(networkSets.map(s => s.artist.name))];
+        const artistNames = Array.from(new Set(networkSets.map(s => s.artist.name)));
 
         networks.push({
-          sets: networkSets.sort((a, b) => toMs(a.startTime) - toMs(b.startTime)),
+          sets: networkSets.sort((a, b) => toMs(a.startTime ?? "") - toMs(b.startTime ?? "")),
           conflicts: networkConflicts,
           totalOverlapMinutes: totalOverlap,
           artistNames,
@@ -190,14 +164,12 @@ export function suggestNetworkResolution(
   network: ConflictNetwork,
   allFavorites: SetWithDetails[]
 ): { keep: SetWithDetails[]; drop: SetWithDetails[]; reason: string } {
-  // Count genre frequency across all favorites
   const freq = new Map<string, number>();
   for (const fav of allFavorites) {
     const genres = (fav.artist.genres ?? "").split(",").map((g) => g.trim()).filter(Boolean);
     for (const g of genres) freq.set(g, (freq.get(g) ?? 0) + 1);
   }
 
-  // Score each set in the network
   const scoredSets = network.sets.map(set => ({
     set,
     score: (() => {
@@ -205,21 +177,18 @@ export function suggestNetworkResolution(
       if (!primary) return 0;
       return freq.get(primary) ?? 0;
     })(),
-    startTime: toMs(set.startTime),
+    startTime: toMs(set.startTime ?? ""),
   }));
 
-  // Sort by score (descending), then by start time (ascending)
   scoredSets.sort((a, b) => {
     if (a.score !== b.score) return b.score - a.score;
     return a.startTime - b.startTime;
   });
 
-  // Keep the highest scoring sets that don't conflict
   const keep: SetWithDetails[] = [];
   const drop: SetWithDetails[] = [];
 
   for (const { set } of scoredSets) {
-    // Check if this set conflicts with any kept sets
     const conflictsWithKept = keep.some(keptSet =>
       network.conflicts.some(c =>
         (c.a.id === set.id && c.b.id === keptSet.id) ||

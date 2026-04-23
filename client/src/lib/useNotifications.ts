@@ -18,6 +18,13 @@ import type { SetWithDetails } from "@shared/schema";
 
 const IS_NATIVE = Capacitor.isNativePlatform();
 
+// Fixed notification ID for the last-day review/tip prompt (cannot collide with
+// set-based IDs because those are hashed from UUID strings, which always produce
+// values far below this sentinel).
+const LAST_DAY_NOTIF_ID = 9_800_001;
+// May 17 2026 at 5 PM PT — before the Sunday headliners kick off.
+const LAST_DAY_NOTIF_AT = new Date("2026-05-17T17:00:00-07:00");
+
 function setIdToNotifId(setId: string): number {
   // Stable numeric ID: hash the string into a positive 32-bit int.
   let h = 0;
@@ -25,6 +32,32 @@ function setIdToNotifId(setId: string): number {
     h = (Math.imul(31, h) + setId.charCodeAt(i)) | 0;
   }
   return Math.abs(h);
+}
+
+/**
+ * Schedules the one-time last-day review/tip nudge for May 17 2026 at 5 PM PT.
+ * Safe to call on every app launch — cancels and reschedules only if the fire
+ * time is still in the future.
+ */
+export async function scheduleLastDayNotification(): Promise<void> {
+  if (!IS_NATIVE) return;
+  if (LAST_DAY_NOTIF_AT.getTime() <= Date.now()) return;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: LAST_DAY_NOTIF_ID }] });
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: LAST_DAY_NOTIF_ID,
+          title: "Last day of EDC — how's your weekend? 🎉",
+          body: "Loving PocketSets? Leave a quick review or drop a tip from Settings!",
+          schedule: { at: LAST_DAY_NOTIF_AT },
+          smallIcon: "ic_notification",
+        },
+      ],
+    });
+  } catch {
+    // Non-fatal — notification is a nice-to-have.
+  }
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -88,7 +121,7 @@ export function useScheduleNotifications(
     }
 
     // Cancel notifications for sets no longer in desired
-    const toCancel = [...lastScheduledRef.current]
+    const toCancel = Array.from(lastScheduledRef.current)
       .filter((id) => !desired.has(id))
       .map((id) => ({ id: setIdToNotifId(id) }));
 

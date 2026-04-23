@@ -18,6 +18,20 @@ import Settings from "@/pages/Settings";
 import Announcements from "@/pages/Announcements";
 import { AppShell } from "@/components/AppShell";
 import { NowProvider } from "@/lib/now";
+import { initAnalytics } from "@/lib/analytics";
+import { configureRevenueCat } from "@/lib/revenuecat";
+import {
+  requestNotificationPermission,
+  scheduleLastDayNotification,
+} from "@/lib/useNotifications";
+
+initAnalytics();
+configureRevenueCat().catch(() => {});
+
+// Best-effort: request permission then schedule the last-day nudge.
+requestNotificationPermission().then((granted) => {
+  if (granted) scheduleLastDayNotification();
+});
 function AppRouter() {
   return (
     <Switch>

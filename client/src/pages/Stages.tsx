@@ -33,11 +33,12 @@ export default function StagesPage() {
           const stageSets = sets.filter((x) => x.stageId === s.id);
           const favCount = stageSets.filter((x) => x.isFavorite).length;
           const liveSet = stageSets.find(
-            (x) => nowMs >= new Date(x.startTime).getTime() && nowMs < new Date(x.endTime).getTime(),
+            (x) => x.startTime !== null && x.endTime !== null &&
+              nowMs >= new Date(x.startTime).getTime() && nowMs < new Date(x.endTime).getTime(),
           );
           const nextSet = stageSets
-            .filter((x) => x.startTime && new Date(x.startTime).getTime() > nowMs)
-            .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
+            .filter((x) => x.startTime != null && new Date(x.startTime).getTime() > nowMs)
+            .sort((a, b) => new Date(a.startTime!).getTime() - new Date(b.startTime!).getTime())[0];
           return (
             <Link className="group relative block overflow-hidden rounded-xl border border-border bg-card p-6 hover-elevate" key={s.id} href={`/stages/${s.id}`} data-testid={`card-stage-${s.id}`}>
                 <div
